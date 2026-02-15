@@ -6,9 +6,9 @@ BakeBase is production-ready REST API that serves structured, scientifically acc
 
 ## 🎯 Core Features
 
-- **Comprehensive Ingredient Database**: 33+ ingredients across 5 categories (flours, eggs, fats, sugars, leaveners)
-- **Scientific Accuracy**: USDA FoodData Central values, peer-reviewed sources
-- **Real Chemistry Calculations**: The `/combine` endpoint performs actual hydration ratio calculations, protein interaction analysis, leavening adequacy assessment, and pH balance predictions
+- **Comprehensive Ingredient Database**: 60 ingredients across 16 categories (flours, eggs, fats, sugars, leaveners, liquids, salts, starches, chocolates, dairy, extracts, acids, spices, oils, nuts, thickeners, syrups)
+- **Scientific Accuracy**: USDA FoodData Central values, peer-reviewed sources, validated chemistry calculations
+- **Real Chemistry Calculations**: The `/combine` endpoint performs accurate hydration ratio calculations (counts ALL water sources), protein interaction analysis, leavening adequacy assessment with excessive leavening detection, and texture predictions
 - **AI-Optimized**: Every endpoint returns `meta` objects with descriptions and field glossaries
 - **OpenAPI 3.0**: Complete specification at `/docs/openapi.json`
 - **Agent Guide**: Plain-language usage instructions at `/agents`
@@ -220,6 +220,81 @@ curl http://localhost:3000/categories
       "category": "egg",
       "count": 3,
       "examples": ["Whole Egg", "Egg Yolk", "Egg White"]
+    },
+    {
+      "category": "fat",
+      "count": 7,
+      "examples": ["Unsalted Butter", "Coconut Oil", "Shortening"]
+    },
+    {
+      "category": "sugar",
+      "count": 8,
+      "examples": ["Granulated Sugar", "Brown Sugar", "Powdered Sugar"]
+    },
+    {
+      "category": "leavener",
+      "count": 5,
+      "examples": ["Baking Powder", "Baking Soda", "Active Dry Yeast"]
+    },
+    {
+      "category": "liquid",
+      "count": 4,
+      "examples": ["Water", "Whole Milk", "Heavy Cream"]
+    },
+    {
+      "category": "salt",
+      "count": 2,
+      "examples": ["Table Salt", "Kosher Salt"]
+    },
+    {
+      "category": "starch",
+      "count": 2,
+      "examples": ["Cornstarch", "Tapioca Starch"]
+    },
+    {
+      "category": "chocolate",
+      "count": 2,
+      "examples": ["Unsweetened Cocoa Powder", "Dark Chocolate"]
+    },
+    {
+      "category": "dairy",
+      "count": 3,
+      "examples": ["Cream Cheese", "Sour Cream", "Plain Yogurt"]
+    },
+    {
+      "category": "extract",
+      "count": 2,
+      "examples": ["Pure Vanilla Extract", "Almond Extract"]
+    },
+    {
+      "category": "acid",
+      "count": 2,
+      "examples": ["White Vinegar", "Lemon Juice"]
+    },
+    {
+      "category": "spice",
+      "count": 2,
+      "examples": ["Ground Cinnamon", "Ground Nutmeg"]
+    },
+    {
+      "category": "oil",
+      "count": 2,
+      "examples": ["Vegetable Oil", "Extra Virgin Olive Oil"]
+    },
+    {
+      "category": "nut",
+      "count": 2,
+      "examples": ["Almond Flour", "Chopped Walnuts"]
+    },
+    {
+      "category": "thickener",
+      "count": 2,
+      "examples": ["Unflavored Gelatin", "Agar Agar Powder"]
+    },
+    {
+      "category": "syrup",
+      "count": 2,
+      "examples": ["Honey", "Molasses"]
     }
   ],
   "meta": {
@@ -418,6 +493,42 @@ Occurs when flour proteins (glutenin + gliadin) hydrate and develop through mixi
 - **Acidic (<5.5)**: Enhances baking soda leavening, tenderizes gluten
 - **Neutral (5.5-7.5)**: Standard baking environment
 - **Alkaline (>7.5)**: Accelerates browning, can weaken gluten
+
+---
+
+## ✨ Recent Improvements (Feb 2026)
+
+### Ingredient Database Expansion
+- **Expanded from 33 to 60 ingredients** (+82% increase)
+- **Added 11 new categories**: liquids, salts, starches, chocolates, dairy, extracts, acids, spices, oils, nuts, thickeners, syrups
+- **Added critical missing ingredients**: water, milk, butter, salt, vinegar, oil, vanilla, cinnamon, honey, and more
+
+### Chemistry Calculation Fixes
+The `/combine` endpoint chemistry analysis has been significantly improved:
+
+1. **Fixed Liquid Calculation** ✅
+   - **Previous bug**: Only counted ingredients >70% water content, missing butter's 15.9% water
+   - **Fix**: Now correctly counts ALL water from ALL ingredients
+   - **Impact**: Accurate hydration ratios (e.g., 123.9g detected vs 76g old)
+
+2. **Added Excessive Leavening Detection** ✅
+   - **Previous bug**: 100g baking powder + 250g flour (40% ratio) reported as "adequate"
+   - **Fix**: Now warns when >6% chemical or >4% biological leavening relative to flour
+   - **Impact**: Prevents bitter taste, collapsed structures from too much leavening
+
+3. **Fixed Contradictory Texture Predictions** ✅
+   - **Previous bug**: Predicted "airy" texture with 0% hydration (impossible - no dough can form)
+   - **Fix**: Only applies "airy" when hydration >30% OR no flour present
+   - **Impact**: Eliminates contradictory predictions
+
+4. **Added Leavening Weight Tracking** ✅
+   - **Fix**: Tracks actual weights of chemical and biological leavening agents
+   - **Impact**: Enables accurate ratio calculations and warnings
+
+### Validation & Testing
+- Created comprehensive test suite (`test_chemistry.ts`)
+- Validated all fixes with real recipe scenarios
+- Documented all changes in `PROGRESS_REPORT.md`
 
 ---
 
