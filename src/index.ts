@@ -3,8 +3,11 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import routes from './routes';
 
+console.log('🚀 Starting BakeBase API...');
+
 // Load environment variables
 dotenv.config();
+console.log('✓ Environment loaded');
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -48,9 +51,24 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 });
 
 // Start server
-app.listen(PORT, '0.0.0.0', () => {
+console.log(`Attempting to start server on port ${PORT}...`);
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🍞 BakeBase API running on port ${PORT}`);
   console.log(`📚 Documentation available at /api/docs`);
   console.log(`📋 OpenAPI spec available at /api/docs/openapi.json`);
   console.log(`💚 Health check available at /api/health`);
+});
+
+server.on('error', (error: any) => {
+  console.error('❌ Server failed to start:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
 });
