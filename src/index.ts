@@ -48,9 +48,9 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🍞 BakeBase API running on port ${PORT}`);
-  console.log(`📚 Documentation: http://localhost:${PORT}/agents`);
-  console.log(`📋 OpenAPI spec: http://localhost:${PORT}/docs/openapi.json`);
-  console.log(`💚 Health check: http://localhost:${PORT}/health`);
+  console.log(`📚 Documentation available at /api/docs`);
+  console.log(`📋 OpenAPI spec available at /api/docs/openapi.json`);
+  console.log(`💚 Health check available at /api/health`);
 });
