@@ -1,0 +1,61 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Ingredient {
+  id                      String   @id @default(cuid())
+  name                    String   @unique
+  category                String
+  description             String
+
+  // Nutritional composition (percentages by weight)
+  water_content_pct       Float?
+  protein_content_pct     Float?
+  fat_content_pct         Float?
+  starch_content_pct      Float?
+  sugar_content_pct       Float?
+  fiber_content_pct       Float?
+
+  // Chemical properties
+  ph_level_min            Float?
+  ph_level_max            Float?
+
+  // Physical properties
+  density_g_per_ml        Float?
+  standard_measurement_unit String // "weight" or "volume"
+
+  // Functional properties
+  gluten_forming          Boolean  @default(false)
+  emulsifying             Boolean  @default(false)
+  leavening_type          String?  // null | "biological" | "chemical" | "mechanical" | "steam"
+  hygroscopic             Boolean  @default(false)
+  typical_hydration_ratio Float?   // how much liquid this absorbs relative to its weight
+
+  // Sensory and usage
+  flavor_profile          String[] // text array
+  primary_function        String   // one clear sentence
+
+  // Interactions and substitutions (stored as JSON)
+  interactions            Json     // array of { ingredient, effect, notes }
+  substitution_ratio      Json     // array of { substitute, ratio, notes }
+
+  // Thermal properties
+  temperature_sensitivity String
+
+  // Data provenance
+  source_notes            String
+  confidence_level        String   // "verified" | "community" | "inferred"
+
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  @@index([category])
+  @@index([confidence_level])
+}
