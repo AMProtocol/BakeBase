@@ -25,6 +25,8 @@ export class ChemistryService {
     // Track specific ingredient types
     let flourWeight = 0;
     let liquidWeight = 0;
+    let chemicalLeaveningWeight = 0;
+    let biologicalLeaveningWeight = 0;
     const leaveners = { biological: false, chemical: false, mechanical: false };
     const ingredients_used: Array<{ name: string; quantity_g: number; percentage_of_total: number }> = [];
 
@@ -58,15 +60,20 @@ export class ChemistryService {
         flourWeight += weight;
       }
 
-      // Liquids include: eggs (76% water), water itself, milk, etc.
-      if ((ingredient.water_content_pct || 0) > 70) {
-        liquidWeight += weight * ((ingredient.water_content_pct || 0) / 100);
-      }
+      // Count ALL water content from ALL ingredients
+      const waterContent = (ingredient.water_content_pct || 0) / 100;
+      liquidWeight += weight * waterContent;
 
-      // Track leavening types
+      // Track leavening types and weights
       if (ingredient.leavening_type) {
-        if (ingredient.leavening_type === 'biological') leaveners.biological = true;
-        if (ingredient.leavening_type === 'chemical') leaveners.chemical = true;
+        if (ingredient.leavening_type === 'biological') {
+          leaveners.biological = true;
+          biologicalLeaveningWeight += weight;
+        }
+        if (ingredient.leavening_type === 'chemical') {
+          leaveners.chemical = true;
+          chemicalLeaveningWeight += weight;
+        }
         if (ingredient.leavening_type === 'mechanical' || ingredient.leavening_type === 'steam') {
           leaveners.mechanical = true;
         }
@@ -118,14 +125,33 @@ export class ChemistryService {
       leaveningAdequacy = 'none';
       leaveningNotes = 'No leavening detected. Product will be dense (flatbread, unleavened bread, or must rely on eggs/steam).';
     } else {
-      // Simple heuristic: biological or chemical leavening present = adequate for now
-      // More sophisticated: check actual quantities
-      leaveningAdequacy = 'adequate';
       const types: string[] = [];
       if (leaveners.biological) types.push('biological (yeast)');
       if (leaveners.chemical) types.push('chemical (baking powder/soda)');
       if (leaveners.mechanical) types.push('mechanical (whipped eggs/steam)');
-      leaveningNotes = `Leavening present: ${types.join(', ')}.`;
+
+      // Check for excessive leavening
+      // Typical ratios: chemical 3-5% of flour, biological 1-3% of flour
+      let isExcessive = false;
+      if (flourWeight > 0) {
+        const chemicalRatio = (chemicalLeaveningWeight / flourWeight) * 100;
+        const biologicalRatio = (biologicalLeaveningWeight / flourWeight) * 100;
+
+        if (chemicalRatio > 6) {
+          isExcessive = true;
+          leaveningNotes = `⚠️ EXCESSIVE chemical leavening detected (${chemicalRatio.toFixed(1)}% of flour weight, normal is 3-5%). This will create bitter taste, excessive rise, and collapsed structure. Reduce leavening significantly.`;
+        } else if (biologicalRatio > 4) {
+          isExcessive = true;
+          leaveningNotes = `⚠️ EXCESSIVE yeast detected (${biologicalRatio.toFixed(1)}% of flour weight, normal is 1-3%). This will over-ferment rapidly and create off-flavors. Reduce yeast amount.`;
+        }
+      }
+
+      if (isExcessive) {
+        leaveningAdequacy = 'excessive';
+      } else {
+        leaveningAdequacy = 'adequate';
+        leaveningNotes = `Leavening present: ${types.join(', ')}.`;
+      }
     }
 
     // Protein interaction summary
@@ -150,9 +176,10 @@ export class ChemistryService {
     if (avgProteinPct > 12 && flourWeight > 0) textureProfile.push('chewy');
     if (avgProteinPct < 8) textureProfile.push('delicate');
     if (hydrationRatio > 100) textureProfile.push('moist');
-    if (hydrationRatio < 60) textureProfile.push('crumbly');
+    if (hydrationRatio < 60 && flourWeight > 0) textureProfile.push('crumbly');
     if (totalSugar > 20) textureProfile.push('sweet');
-    if (hasLeavening) textureProfile.push('airy');
+    // Only "airy" if there's leavening AND enough liquid to form a dough/batter
+    if (hasLeavening && (hydrationRatio > 30 || flourWeight === 0)) textureProfile.push('airy');
     if (!hasLeavening && flourWeight > 0) textureProfile.push('dense');
 
     // pH environment
