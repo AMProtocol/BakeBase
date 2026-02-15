@@ -985,6 +985,226 @@ async function main() {
     }
   ];
 
+  // LIQUIDS
+  const liquids = [
+    {
+      name: 'Water',
+      category: 'liquid',
+      description: 'Pure H2O, the universal solvent that hydrates flour proteins to form gluten and dissolves ingredients.',
+      water_content_pct: 100.0,
+      protein_content_pct: 0.0,
+      fat_content_pct: 0.0,
+      starch_content_pct: 0.0,
+      sugar_content_pct: 0.0,
+      fiber_content_pct: 0.0,
+      ph_level_min: 6.5,
+      ph_level_max: 7.5,
+      density_g_per_ml: 1.0,
+      standard_measurement_unit: 'volume',
+      gluten_forming: false,
+      emulsifying: false,
+      leavening_type: 'steam',
+      hygroscopic: false,
+      typical_hydration_ratio: null,
+      flavor_profile: ['neutral', 'clean'],
+      primary_function: 'Hydrates flour to develop gluten, dissolves ingredients, creates steam for leavening, controls dough consistency.',
+      interactions: [
+        { ingredient: 'flour', effect: 'Hydrates proteins to form gluten network', notes: 'Ratio determines dough consistency' },
+        { ingredient: 'yeast', effect: 'Dissolves and activates yeast', notes: 'Temperature critical: 105-115°F for active dry' },
+        { ingredient: 'salt', effect: 'Dissolves salt for even distribution', notes: 'Prevents salt from directly contacting yeast' },
+        { ingredient: 'heat', effect: 'Converts to steam at 212°F (100°C)', notes: 'Steam leavening in popovers, cream puffs, bread' }
+      ],
+      substitution_ratio: [
+        { substitute: 'milk', ratio: '1:1', notes: 'Adds protein and fat, softer crumb' },
+        { substitute: 'buttermilk', ratio: '1:1', notes: 'Adds acid and tang' }
+      ],
+      temperature_sensitivity: 'Freezes at 32°F (0°C), boils at 212°F (100°C) at sea level. Hard water (high mineral content) can toughen gluten. Soft water can make dough sticky. Chlorine in tap water can inhibit yeast.',
+      source_notes: 'Food science consensus, Bread Science by Emily Buehler',
+      confidence_level: 'verified'
+    },
+    {
+      name: 'Whole Milk',
+      category: 'liquid',
+      description: 'Full-fat cow\'s milk with ~3.25% milkfat, adds richness, protein, and lactose to baked goods.',
+      water_content_pct: 88.0,
+      protein_content_pct: 3.2,
+      fat_content_pct: 3.25,
+      starch_content_pct: 0.0,
+      sugar_content_pct: 4.8,
+      fiber_content_pct: 0.0,
+      ph_level_min: 6.5,
+      ph_level_max: 6.7,
+      density_g_per_ml: 1.03,
+      standard_measurement_unit: 'volume',
+      gluten_forming: false,
+      emulsifying: true,
+      leavening_type: null,
+      hygroscopic: false,
+      typical_hydration_ratio: null,
+      flavor_profile: ['creamy', 'sweet', 'mild', 'dairy'],
+      primary_function: 'Provides liquid for hydration plus fat for tenderness, protein for structure, lactose for browning.',
+      interactions: [
+        { ingredient: 'flour', effect: 'Milk proteins strengthen dough, fat tenderizes', notes: 'Creates softer, finer crumb than water' },
+        { ingredient: 'yeast', effect: 'Lactose feeds yeast slowly, milk proteins enrich dough', notes: 'Scalding milk denatures proteins that can inhibit yeast' },
+        { ingredient: 'heat', effect: 'Milk sugars brown via Maillard reaction', notes: 'Creates golden crust' },
+        { ingredient: 'acid', effect: 'Curdles when combined with strong acid', notes: 'Can be intentional for buttermilk substitute' }
+      ],
+      substitution_ratio: [
+        { substitute: 'water', ratio: '1:1', notes: 'Lose richness and browning' },
+        { substitute: 'buttermilk', ratio: '1:1', notes: 'Add 1/8 tsp baking soda per cup to neutralize acid' },
+        { substitute: 'non-dairy milk', ratio: '1:1', notes: 'Soy milk closest to dairy milk properties' }
+      ],
+      temperature_sensitivity: 'Proteins denature at 180°F (82°C). Scalding (180°F) denatures whey proteins that can inhibit yeast. Fat emulsion stable at baking temps. Lactose does not caramelize but participates in Maillard browning starting at 285°F (140°C).',
+      source_notes: 'USDA FoodData Central (FDC ID: 746782), On Food and Cooking by Harold McGee',
+      confidence_level: 'verified'
+    },
+    {
+      name: 'Buttermilk',
+      category: 'liquid',
+      description: 'Cultured low-fat milk with lactic acid bacteria, acidic liquid that tenderizes and reacts with baking soda.',
+      water_content_pct: 90.0,
+      protein_content_pct: 3.3,
+      fat_content_pct: 1.0,
+      starch_content_pct: 0.0,
+      sugar_content_pct: 4.8,
+      fiber_content_pct: 0.0,
+      ph_level_min: 4.4,
+      ph_level_max: 4.8,
+      density_g_per_ml: 1.03,
+      standard_measurement_unit: 'volume',
+      gluten_forming: false,
+      emulsifying: false,
+      leavening_type: null,
+      hygroscopic: false,
+      typical_hydration_ratio: null,
+      flavor_profile: ['tangy', 'sour', 'rich', 'complex'],
+      primary_function: 'Provides acidity for chemical leavening with baking soda, tenderizes gluten, adds tang.',
+      interactions: [
+        { ingredient: 'baking soda', effect: 'Acid reacts with soda to produce CO2', notes: 'Essential pairing for tender quick breads' },
+        { ingredient: 'gluten', effect: 'Acid weakens gluten structure', notes: 'Creates very tender biscuits and pancakes' },
+        { ingredient: 'cocoa', effect: 'Acid enhances chocolate flavor', notes: 'Traditional in red velvet and chocolate cakes' },
+        { ingredient: 'cream', effect: 'Can be churned to make cultured butter', notes: 'Historical source before commercial buttermilk' }
+      ],
+      substitution_ratio: [
+        { substitute: 'milk + vinegar', ratio: '1 cup milk + 1 tbsp vinegar', notes: 'Let sit 5 minutes, similar acidity' },
+        { substitute: 'milk + lemon juice', ratio: '1 cup milk + 1 tbsp lemon juice', notes: 'Same as vinegar method' },
+        { substitute: 'plain yogurt', ratio: '1:1 thinned with milk', notes: 'Similar tang and acidity' }
+      ],
+      temperature_sensitivity: 'Lactic acid stable at baking temps. Proteins coagulate similarly to milk. pH 4.4-4.8 provides optimal environment for baking soda reaction. Do not boil as it can separate.',
+      source_notes: 'USDA FoodData Central (FDC ID: 170417), food science consensus',
+      confidence_level: 'verified'
+    },
+    {
+      name: 'Heavy Cream',
+      category: 'liquid',
+      description: 'High-fat dairy cream with 36-40% milkfat, whips to stable foam, adds richness and moisture.',
+      water_content_pct: 57.7,
+      protein_content_pct: 2.1,
+      fat_content_pct: 37.0,
+      starch_content_pct: 0.0,
+      sugar_content_pct: 2.8,
+      fiber_content_pct: 0.0,
+      ph_level_min: 6.5,
+      ph_level_max: 6.8,
+      density_g_per_ml: 1.01,
+      standard_measurement_unit: 'volume',
+      gluten_forming: false,
+      emulsifying: true,
+      leavening_type: 'mechanical',
+      hygroscopic: false,
+      typical_hydration_ratio: null,
+      flavor_profile: ['rich', 'creamy', 'buttery', 'luxurious'],
+      primary_function: 'Creates stable whipped cream for mechanical leavening, adds richness and moisture, high-fat liquid.',
+      interactions: [
+        { ingredient: 'air', effect: 'Fat globules stabilize air bubbles when whipped', notes: 'Whips to 2x volume, stable foam' },
+        { ingredient: 'sugar', effect: 'Sugar stabilizes whipped cream foam', notes: 'Add after soft peaks for best stability' },
+        { ingredient: 'heat', effect: 'Reduces to thick sauce, fat emulsion', notes: 'Ganache base with chocolate' },
+        { ingredient: 'acid', effect: 'Can be cultured to make crème fraîche', notes: 'Buttermilk + cream + 24 hours' }
+      ],
+      substitution_ratio: [
+        { substitute: 'half-and-half', ratio: '1:1', notes: 'Will not whip, less rich' },
+        { substitute: 'coconut cream', ratio: '1:1', notes: 'Vegan alternative, refrigerate can first' },
+        { substitute: 'whole milk', ratio: '1:1', notes: 'Much less rich, thinner texture' }
+      ],
+      temperature_sensitivity: 'Must be cold (below 40°F/4°C) to whip properly. Fat globules destabilize when warm. Overwhipping breaks emulsion creating butter. Ultra-pasteurized cream whips less stably than regular pasteurized.',
+      source_notes: 'USDA FoodData Central (FDC ID: 170859), Modernist Cuisine',
+      confidence_level: 'verified'
+    }
+  ];
+
+  // SALTS
+  const salts = [
+    {
+      name: 'Table Salt',
+      category: 'salt',
+      description: 'Fine-grain sodium chloride with anti-caking agents, standard seasoning and gluten strengthener.',
+      water_content_pct: 0.0,
+      protein_content_pct: 0.0,
+      fat_content_pct: 0.0,
+      starch_content_pct: 0.0,
+      sugar_content_pct: 0.0,
+      fiber_content_pct: 0.0,
+      ph_level_min: 7.0,
+      ph_level_max: 7.0,
+      density_g_per_ml: 2.16,
+      standard_measurement_unit: 'weight',
+      gluten_forming: false,
+      emulsifying: false,
+      leavening_type: null,
+      hygroscopic: true,
+      typical_hydration_ratio: null,
+      flavor_profile: ['salty', 'clean', 'sharp'],
+      primary_function: 'Enhances flavor, strengthens gluten, controls yeast fermentation, affects browning.',
+      interactions: [
+        { ingredient: 'flour', effect: 'Strengthens and tightens gluten network', notes: 'Essential for bread structure, typically 1.8-2% of flour weight' },
+        { ingredient: 'yeast', effect: 'Inhibits yeast fermentation in high concentrations', notes: 'Slows fermentation, extends flavor development' },
+        { ingredient: 'butter', effect: 'Enhances buttery flavor', notes: 'Traditional in most baking' },
+        { ingredient: 'sugar', effect: 'Salt balances sweetness', notes: 'Critical even in sweet baked goods' }
+      ],
+      substitution_ratio: [
+        { substitute: 'kosher salt', ratio: '1:1.5', notes: 'Use 1.5x volume kosher salt due to larger crystals' },
+        { substitute: 'sea salt', ratio: '1:1', notes: 'Fine sea salt substitutes 1:1' }
+      ],
+      temperature_sensitivity: 'Stable at all baking temperatures. Does not evaporate or decompose. Delays Maillard browning slightly by interfering with amino acids. Prevents staling by binding water.',
+      source_notes: 'Food science consensus, Bread Science by Emily Buehler, typical ratio 1.8-2% of flour weight',
+      confidence_level: 'verified'
+    },
+    {
+      name: 'Kosher Salt',
+      category: 'salt',
+      description: 'Coarse-grain sodium chloride without additives, dissolves slower than table salt.',
+      water_content_pct: 0.0,
+      protein_content_pct: 0.0,
+      fat_content_pct: 0.0,
+      starch_content_pct: 0.0,
+      sugar_content_pct: 0.0,
+      fiber_content_pct: 0.0,
+      ph_level_min: 7.0,
+      ph_level_max: 7.0,
+      density_g_per_ml: 1.20,
+      standard_measurement_unit: 'weight',
+      gluten_forming: false,
+      emulsifying: false,
+      leavening_type: null,
+      hygroscopic: true,
+      typical_hydration_ratio: null,
+      flavor_profile: ['salty', 'clean', 'pure'],
+      primary_function: 'Same as table salt but larger crystals provide texture and slower dissolution.',
+      interactions: [
+        { ingredient: 'flour', effect: 'Identical to table salt when dissolved', notes: 'Same gluten strengthening' },
+        { ingredient: 'dough', effect: 'Slower dissolution due to larger crystals', notes: 'Mix thoroughly to distribute evenly' },
+        { ingredient: 'surface', effect: 'Can be sprinkled on top for crunchy texture', notes: 'Pretzel salt, focaccia topping' }
+      ],
+      substitution_ratio: [
+        { substitute: 'table salt', ratio: '1:0.67', notes: 'Use 2/3 volume table salt (or equal by weight)' },
+        { substitute: 'sea salt flakes', ratio: '1:1', notes: 'Similar crystal size' }
+      ],
+      temperature_sensitivity: 'Identical to table salt thermally. No additives means pure sodium chloride behavior. Larger crystals take longer to dissolve in cold liquids. Popular for even seasoning and clean flavor.',
+      source_notes: 'Food science consensus, note: volume measurements vary by brand (Diamond vs Morton)',
+      confidence_level: 'verified'
+    }
+  ];
+
   // LEAVENERS
   const leaveners = [
     {
@@ -1164,8 +1384,342 @@ async function main() {
     }
   ];
 
+  // STARCHES
+  const starches = [
+    {
+      name: 'Cornstarch',
+      category: 'starch',
+      description: 'Pure starch extracted from corn, used as thickener and to tenderize baked goods.',
+      water_content_pct: 8.3,
+      protein_content_pct: 0.3,
+      fat_content_pct: 0.1,
+      starch_content_pct: 91.3,
+      sugar_content_pct: 0.0,
+      fiber_content_pct: 0.9,
+      ph_level_min: 4.0,
+      ph_level_max: 7.0,
+      density_g_per_ml: 0.560,
+      standard_measurement_unit: 'weight',
+      gluten_forming: false,
+      emulsifying: false,
+      leavening_type: null,
+      hygroscopic: true,
+      typical_hydration_ratio: null,
+      flavor_profile: ['neutral', 'bland'],
+      primary_function: 'Tenderizes by diluting gluten, thickens liquids, creates crisp texture in cookies.',
+      interactions: [
+        { ingredient: 'flour', effect: 'Dilutes protein content, weakens gluten', notes: 'Makes cake flour substitute with AP flour' },
+        { ingredient: 'liquid', effect: 'Thickens at 203°F (95°C) via gelatinization', notes: 'Cloudy gel, can thin if overheated' },
+        { ingredient: 'acid', effect: 'Acid can prevent thickening', notes: 'Add acid after thickening occurs' }
+      ],
+      substitution_ratio: [
+        { substitute: 'all-purpose flour', ratio: '1:2', notes: 'Use 2 tbsp flour per tbsp cornstarch for thickening' },
+        { substitute: 'tapioca starch', ratio: '1:1', notes: 'Clear gel vs cloudy' },
+        { substitute: 'arrowroot powder', ratio: '1:1', notes: 'Similar properties' }
+      ],
+      temperature_sensitivity: 'Gelatinizes 144-158°F (62-70°C), fully thickened at 203°F (95°C). Breaks down with prolonged heat or vigorous stirring. Freezes and thaws poorly (weeping). Creates crisp texture in cookies by absorbing moisture.',
+      source_notes: 'USDA FoodData Central (FDC ID: 168918), food science consensus',
+      confidence_level: 'verified'
+    },
+    {
+      name: 'Tapioca Starch',
+      category: 'starch',
+      description: 'Starch from cassava root, creates clear gel and chewy texture, gluten-free.',
+      water_content_pct: 11.0,
+      protein_content_pct: 0.2,
+      fat_content_pct: 0.0,
+      starch_content_pct: 88.7,
+      sugar_content_pct: 0.0,
+      fiber_content_pct: 0.1,
+      ph_level_min: 4.5,
+      ph_level_max: 7.0,
+      density_g_per_ml: 0.540,
+      standard_measurement_unit: 'weight',
+      gluten_forming: false,
+      emulsifying: false,
+      leavening_type: null,
+      hygroscopic: true,
+      typical_hydration_ratio: null,
+      flavor_profile: ['neutral', 'clean'],
+      primary_function: 'Creates clear gel for pie fillings, adds chew to gluten-free baking, crisps coatings.',
+      interactions: [
+        { ingredient: 'liquid', effect: 'Thickens to clear, glossy gel', notes: 'Better freeze-thaw stability than cornstarch' },
+        { ingredient: 'acid', effect: 'More acid-stable than cornstarch', notes: 'Ideal for fruit pies' },
+        { ingredient: 'gluten-free flour', effect: 'Adds structure and chew', notes: 'Essential in GF flour blends' }
+      ],
+      substitution_ratio: [
+        { substitute: 'cornstarch', ratio: '1:1', notes: 'Cloudy gel instead of clear' },
+        { substitute: 'arrowroot', ratio: '1:1', notes: 'Similar clarity' }
+      ],
+      temperature_sensitivity: 'Gelatinizes at lower temp than cornstarch (131-144°F/55-62°C). Creates elastic, chewy gel. Excellent freeze-thaw stability. Works in acidic fillings. Remains stable when cooled.',
+      source_notes: 'USDA FoodData Central, food science consensus, traditional in Brazilian cheese bread',
+      confidence_level: 'verified'
+    }
+  ];
+
+  // CHOCOLATE
+  const chocolates = [
+    {
+      name: 'Unsweetened Cocoa Powder',
+      category: 'chocolate',
+      description: 'Roasted cocoa beans with cocoa butter removed, intense chocolate flavor, no sugar.',
+      water_content_pct: 3.0,
+      protein_content_pct: 19.6,
+      fat_content_pct: 13.7,
+      starch_content_pct: 0.0,
+      sugar_content_pct: 1.8,
+      fiber_content_pct: 33.2,
+      ph_level_min: 5.3,
+      ph_level_max: 5.8,
+      density_g_per_ml: 0.480,
+      standard_measurement_unit: 'weight',
+      gluten_forming: false,
+      emulsifying: false,
+      leavening_type: null,
+      hygroscopic: true,
+      typical_hydration_ratio: null,
+      flavor_profile: ['bitter', 'chocolate', 'intense', 'acidic'],
+      primary_function: 'Provides chocolate flavor without sweetness, absorbs liquid, adds color and slight bitterness.',
+      interactions: [
+        { ingredient: 'sugar', effect: 'Essential to balance bitterness', notes: 'Unsweetened cocoa requires added sugar' },
+        { ingredient: 'baking soda', effect: 'Neutralizes acidity, darkens color', notes: 'Dutch-process vs natural cocoa' },
+        { ingredient: 'liquid', effect: 'Absorbs liquid like flour, needs extra hydration', notes: 'Reduce flour slightly when adding cocoa' },
+        { ingredient: 'fat', effect: 'Fat content provides richness despite being "unsweetened"', notes: '10-14% cocoa butter remains' }
+      ],
+      substitution_ratio: [
+        { substitute: 'unsweetened chocolate', ratio: '3 tbsp cocoa + 1 tbsp fat per oz chocolate', notes: 'Cocoa is defatted chocolate' },
+        { substitute: 'Dutch-process cocoa', ratio: '1:1 plus adjust leavening', notes: 'Natural cocoa is acidic, Dutch is neutral' }
+      ],
+      temperature_sensitivity: 'Stable at baking temps. Natural cocoa (pH 5.3-5.8) reacts with baking soda. Flavor compounds can become harsh if overheated. Blooms if exposed to moisture then dried.',
+      source_notes: 'USDA FoodData Central (FDC ID: 170369), On Food and Cooking by Harold McGee',
+      confidence_level: 'verified'
+    },
+    {
+      name: 'Dark Chocolate',
+      category: 'chocolate',
+      description: 'Chocolate with 60-85% cacao, contains cocoa solids, cocoa butter, and some sugar.',
+      water_content_pct: 0.8,
+      protein_content_pct: 7.8,
+      fat_content_pct: 42.6,
+      starch_content_pct: 0.0,
+      sugar_content_pct: 23.9,
+      fiber_content_pct: 11.0,
+      ph_level_min: 5.0,
+      ph_level_max: 6.0,
+      density_g_per_ml: 1.20,
+      standard_measurement_unit: 'weight',
+      gluten_forming: false,
+      emulsifying: true,
+      leavening_type: null,
+      hygroscopic: false,
+      typical_hydration_ratio: null,
+      flavor_profile: ['chocolate', 'bitter', 'complex', 'rich'],
+      primary_function: 'Provides chocolate flavor, cocoa butter richness, and slight sweetness.',
+      interactions: [
+        { ingredient: 'butter', effect: 'Cocoa butter and dairy fat create smooth ganache', notes: 'Ratio determines firmness' },
+        { ingredient: 'cream', effect: 'Emulsifies into stable ganache', notes: '1:1 ratio for pourable, 2:1 for truffle' },
+        { ingredient: 'heat', effect: 'Melts 88-93°F (31-34°C)', notes: 'Can seize if water added while melting' },
+        { ingredient: 'eggs', effect: 'Creates rich chocolate custards', notes: 'Protein sets around chocolate' }
+      ],
+      substitution_ratio: [
+        { substitute: 'cocoa powder', ratio: '1 oz = 3 tbsp cocoa + 1 tbsp fat + 1 tbsp sugar', notes: 'Approximate, depends on % cacao' },
+        { substitute: 'milk chocolate', ratio: '1:1', notes: 'Sweeter, less intense flavor' }
+      ],
+      temperature_sensitivity: 'Melts 88-93°F (31-34°C). Seizes if water droplets contact melted chocolate. Burns above 120°F (49°C). Tempering required for coating: heat to 115°F, cool to 80°F, reheat to 88-90°F. Blooms (white streaks) from temperature fluctuation or moisture.',
+      source_notes: 'USDA FoodData Central (FDC ID: 170273), Modernist Cuisine, based on 70% cacao content',
+      confidence_level: 'verified'
+    }
+  ];
+
+  // DAIRY
+  const dairy = [
+    {
+      name: 'Cream Cheese',
+      category: 'dairy',
+      description: 'Soft, mild-tasting fresh cheese with ~33% fat, adds tang and richness to baking.',
+      water_content_pct: 54.4,
+      protein_content_pct: 5.9,
+      fat_content_pct: 34.2,
+      starch_content_pct: 0.0,
+      sugar_content_pct: 3.2,
+      fiber_content_pct: 0.0,
+      ph_level_min: 4.4,
+      ph_level_max: 4.9,
+      density_g_per_ml: 1.05,
+      standard_measurement_unit: 'weight',
+      gluten_forming: false,
+      emulsifying: true,
+      leavening_type: null,
+      hygroscopic: false,
+      typical_hydration_ratio: null,
+      flavor_profile: ['tangy', 'mild', 'creamy', 'rich'],
+      primary_function: 'Adds moisture, richness, and tang; creates dense, tender texture in cheesecakes and frostings.',
+      interactions: [
+        { ingredient: 'sugar', effect: 'Smooths into frosting', notes: 'Classic cream cheese frosting' },
+        { ingredient: 'eggs', effect: 'Emulsifies into cheesecake batter', notes: 'Room temp cream cheese blends smoothly' },
+        { ingredient: 'butter', effect: 'Enriches dough for Danish and croissants', notes: 'Laminated doughs' },
+        { ingredient: 'heat', effect: 'Melts and can curdle at high heat', notes: 'Gentle heat for cheesecakes (water bath)' }
+      ],
+      substitution_ratio: [
+        { substitute: 'mascarpone', ratio: '1:1', notes: 'Richer, less tangy' },
+        { substitute: 'Greek yogurt', ratio: '1:1', notes: 'Lower fat, more tang' },
+        { substitute: 'Neufchâtel', ratio: '1:1', notes: 'Lower fat version of cream cheese' }
+      ],
+      temperature_sensitivity: 'Must be room temp (65-70°F) for smooth mixing. Curdles above 180°F (82°C) in direct heat. Separates if overbeaten. Slightly acidic (pH 4.4-4.9) from lactic acid fermentation. Freezes poorly (grainy texture).',
+      source_notes: 'USDA FoodData Central (FDC ID: 173418), baking consensus',
+      confidence_level: 'verified'
+    },
+    {
+      name: 'Sour Cream',
+      category: 'dairy',
+      description: 'Cultured cream with lactic acid bacteria, ~20% fat, adds tang and moisture.',
+      water_content_pct: 71.0,
+      protein_content_pct: 2.4,
+      fat_content_pct: 19.5,
+      starch_content_pct: 0.0,
+      sugar_content_pct: 3.5,
+      fiber_content_pct: 0.0,
+      ph_level_min: 4.4,
+      ph_level_max: 4.6,
+      density_g_per_ml: 1.02,
+      standard_measurement_unit: 'volume',
+      gluten_forming: false,
+      emulsifying: true,
+      leavening_type: null,
+      hygroscopic: false,
+      typical_hydration_ratio: null,
+      flavor_profile: ['tangy', 'sour', 'creamy', 'rich'],
+      primary_function: 'Adds moisture, tenderness, and tang; reacts with baking soda for leavening.',
+      interactions: [
+        { ingredient: 'baking soda', effect: 'Acid reacts with soda for CO2', notes: 'Classic pairing in coffee cakes' },
+        { ingredient: 'flour', effect: 'Acid tenderizes gluten', notes: 'Very tender cakes and muffins' },
+        { ingredient: 'butter', effect: 'Adds additional richness', notes: 'Sour cream pound cake' },
+        { ingredient: 'heat', effect: 'Can curdle at high heat', notes: 'Fold in gently, do not boil' }
+      ],
+      substitution_ratio: [
+        { substitute: 'Greek yogurt', ratio: '1:1', notes: 'Similar tang and thickness' },
+        { substitute: 'buttermilk', ratio: '1:1', notes: 'Thinner but same acidity' },
+        { substitute: 'cream cheese + milk', ratio: '3/4 cup cream cheese + 1/4 cup milk per cup', notes: 'Similar richness' }
+      ],
+      temperature_sensitivity: 'Curdles above 180°F (82°C). Acid (pH 4.4-4.6) from lactic acid fermentation. Fat content prevents complete separation. Best added at end of cooking. Freezes poorly.',
+      source_notes: 'USDA FoodData Central (FDC ID: 170883), baking consensus',
+      confidence_level: 'verified'
+    },
+    {
+      name: 'Plain Yogurt',
+      category: 'dairy',
+      description: 'Cultured milk with live bacteria, ~3.5% fat (whole milk yogurt), tangy and thick.',
+      water_content_pct: 87.9,
+      protein_content_pct: 3.5,
+      fat_content_pct: 3.3,
+      starch_content_pct: 0.0,
+      sugar_content_pct: 4.7,
+      fiber_content_pct: 0.0,
+      ph_level_min: 4.0,
+      ph_level_max: 4.6,
+      density_g_per_ml: 1.03,
+      standard_measurement_unit: 'volume',
+      gluten_forming: false,
+      emulsifying: false,
+      leavening_type: null,
+      hygroscopic: false,
+      typical_hydration_ratio: null,
+      flavor_profile: ['tangy', 'sour', 'creamy', 'clean'],
+      primary_function: 'Adds moisture, tenderness, and tang; reacts with baking soda; lower fat than sour cream.',
+      interactions: [
+        { ingredient: 'baking soda', effect: 'Acid reacts for leavening', notes: 'Essential in yogurt-based quick breads' },
+        { ingredient: 'flour', effect: 'Tenderizes via acidity', notes: 'Moist, tender crumb' },
+        { ingredient: 'fruit', effect: 'Pairs well in muffins and cakes', notes: 'Balances sweetness' },
+        { ingredient: 'heat', effect: 'Can separate if boiled', notes: 'Fold in gently' }
+      ],
+      substitution_ratio: [
+        { substitute: 'sour cream', ratio: '1:1', notes: 'Richer, slightly less tang' },
+        { substitute: 'buttermilk', ratio: '1:1', notes: 'Thinner consistency' },
+        { substitute: 'milk + lemon juice', ratio: '1 cup milk + 1 tbsp lemon juice', notes: 'Similar acidity but less thick' }
+      ],
+      temperature_sensitivity: 'Proteins can curdle above 180°F (82°C). Very acidic (pH 4.0-4.6). Greek yogurt is strained for thickness. Full-fat yogurt more stable than low-fat. Probiotics die above 115°F but acid remains.',
+      source_notes: 'USDA FoodData Central (FDC ID: 170903), food science consensus',
+      confidence_level: 'verified'
+    }
+  ];
+
+  // EXTRACTS
+  const extracts = [
+    {
+      name: 'Pure Vanilla Extract',
+      category: 'extract',
+      description: 'Vanilla beans extracted in alcohol, concentrated flavor enhancer used in nearly all baking.',
+      water_content_pct: 47.0,
+      protein_content_pct: 0.1,
+      fat_content_pct: 0.1,
+      starch_content_pct: 0.0,
+      sugar_content_pct: 12.7,
+      fiber_content_pct: 0.0,
+      ph_level_min: 4.0,
+      ph_level_max: 5.0,
+      density_g_per_ml: 0.880,
+      standard_measurement_unit: 'volume',
+      gluten_forming: false,
+      emulsifying: false,
+      leavening_type: null,
+      hygroscopic: false,
+      typical_hydration_ratio: null,
+      flavor_profile: ['vanilla', 'sweet', 'floral', 'complex', 'warm'],
+      primary_function: 'Enhances and rounds out sweetness, adds depth and complexity to baked goods.',
+      interactions: [
+        { ingredient: 'sugar', effect: 'Amplifies and complements sweetness', notes: 'Universal pairing' },
+        { ingredient: 'chocolate', effect: 'Enhances chocolate flavor', notes: 'Essential in brownies and chocolate cakes' },
+        { ingredient: 'dairy', effect: 'Vanilla and cream classic pairing', notes: 'Custards, ice cream, cakes' },
+        { ingredient: 'heat', effect: 'Volatile compounds can evaporate', notes: 'Add near end of cooking when possible' }
+      ],
+      substitution_ratio: [
+        { substitute: 'vanilla bean paste', ratio: '1:1', notes: 'More intense, includes seeds' },
+        { substitute: 'vanilla bean', ratio: '1 bean = 1 tbsp extract', notes: 'Scrape seeds, steep pod' },
+        { substitute: 'imitation vanilla', ratio: '1:1', notes: 'Synthetic vanillin, less complex' }
+      ],
+      temperature_sensitivity: 'Alcohol evaporates above 173°F (78°C), concentrating flavor. Vanillin (main compound) stable at baking temps. Adds minimal liquid (35% alcohol, 65% water). Pure extract superior to imitation for complex flavor.',
+      source_notes: 'USDA FoodData Central (FDC ID: 171326), food science consensus, typical use 1-2 tsp per batch',
+      confidence_level: 'verified'
+    },
+    {
+      name: 'Almond Extract',
+      category: 'extract',
+      description: 'Concentrated almond flavor in alcohol, very potent, used sparingly.',
+      water_content_pct: 55.0,
+      protein_content_pct: 0.0,
+      fat_content_pct: 0.0,
+      starch_content_pct: 0.0,
+      sugar_content_pct: 0.0,
+      fiber_content_pct: 0.0,
+      ph_level_min: 4.5,
+      ph_level_max: 5.5,
+      density_g_per_ml: 0.900,
+      standard_measurement_unit: 'volume',
+      gluten_forming: false,
+      emulsifying: false,
+      leavening_type: null,
+      hygroscopic: false,
+      typical_hydration_ratio: null,
+      flavor_profile: ['almond', 'marzipan', 'intense', 'sweet'],
+      primary_function: 'Provides intense almond flavor, complements vanilla, enhances nutty flavors.',
+      interactions: [
+        { ingredient: 'vanilla', effect: 'Classic pairing, each enhances the other', notes: 'Often used together in sugar cookies' },
+        { ingredient: 'cherry', effect: 'Traditional pairing in cherry desserts', notes: 'Cherry pie, cherry cake' },
+        { ingredient: 'chocolate', effect: 'Enhances chocolate complexity', notes: 'Chocolate almond torte' },
+        { ingredient: 'fruit', effect: 'Complements stone fruits especially', notes: 'Peach, apricot, plum' }
+      ],
+      substitution_ratio: [
+        { substitute: 'vanilla extract', ratio: '4:1', notes: 'Use 4x vanilla for similar sweetness, different flavor' },
+        { substitute: 'amaretto liqueur', ratio: '1:4', notes: 'Use 4x amaretto for similar flavor' }
+      ],
+      temperature_sensitivity: 'Very potent - typically use 1/4-1/2 tsp per batch. Alcohol-based so volatile compounds evaporate with heat. Benzaldehyde (key flavor) stable at baking temps. Pure extract contains bitter almond oil (no actual almonds).',
+      source_notes: 'Food science consensus, culinary tradition, use sparingly due to intensity',
+      confidence_level: 'verified'
+    }
+  ];
+
   // Combine all ingredients
-  const allIngredients = [...flours, ...eggs, ...fats, ...sugars, ...leaveners];
+  const allIngredients = [...flours, ...eggs, ...fats, ...sugars, ...leaveners, ...liquids, ...salts, ...starches, ...chocolates, ...dairy, ...extracts];
 
   // Insert ingredients
   for (const ingredient of allIngredients) {
@@ -1178,6 +1732,12 @@ async function main() {
   console.log(`   - ${fats.length} fats`);
   console.log(`   - ${sugars.length} sugars`);
   console.log(`   - ${leaveners.length} leaveners`);
+  console.log(`   - ${liquids.length} liquids`);
+  console.log(`   - ${salts.length} salts`);
+  console.log(`   - ${starches.length} starches`);
+  console.log(`   - ${chocolates.length} chocolates`);
+  console.log(`   - ${dairy.length} dairy products`);
+  console.log(`   - ${extracts.length} extracts`);
 }
 
 main()
