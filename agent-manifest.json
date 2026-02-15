@@ -1,0 +1,102 @@
+{
+  "spec_version": "agentmanifest-0.1",
+  "name": "BakeBase",
+  "version": "1.0.0",
+  "description": "AI-first food science reference API for baking ingredients. Provides scientifically accurate data on 60+ ingredients across 16 categories including functional properties, chemical interactions, hydration ratios, pH profiles, substitution logic, and real-time chemistry analysis. Use this when you need to understand how baking ingredients behave individually or in combination - ideal for recipe generation, ingredient substitution, troubleshooting baking failures, or building food science applications.",
+  "categories": ["food-science", "chemistry"],
+  "primary_category": "reference",
+  "endpoints": [
+    {
+      "path": "/ingredients",
+      "method": "GET",
+      "description": "List all baking ingredients with optional filtering by category or functional property. Use this to discover available ingredients, browse categories, or find ingredients matching specific criteria (e.g., all emulsifying ingredients, all liquids). Returns comprehensive data including nutritional composition, pH, interactions, and substitutions.",
+      "parameters": [
+        {
+          "name": "category",
+          "type": "string",
+          "required": false,
+          "description": "Filter by category: flour, egg, fat, sugar, leavener, liquid, salt, starch, chocolate, dairy, extract, acid, spice, oil, nut, thickener, syrup"
+        },
+        {
+          "name": "function",
+          "type": "string",
+          "required": false,
+          "description": "Filter by functional property: emulsifying, gluten_forming, leavening, hygroscopic"
+        }
+      ],
+      "response_description": "Returns array of ingredient objects with id, name, category, description, nutritional composition (water/protein/fat/starch/sugar/fiber percentages), pH range, density, functional properties (gluten_forming, emulsifying, leavening_type, hygroscopic), typical_hydration_ratio, flavor_profile, interactions array, substitution_ratio array, temperature_sensitivity notes, source_notes, and confidence_level."
+    },
+    {
+      "path": "/ingredients/:id",
+      "method": "GET",
+      "description": "Get comprehensive functional properties for a single baking ingredient by its unique ID. Use this when you need detailed scientific data about how a specific ingredient behaves, including exact hydration ratios, protein content, pH range, interaction notes with other ingredients, and substitution recommendations.",
+      "parameters": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "description": "Unique ingredient ID (e.g., 'clx123abc'). Obtain IDs from the /ingredients list endpoint."
+        }
+      ],
+      "response_description": "Returns single ingredient object with all properties including interactions (array of {ingredient, effect, notes}), substitution_ratio (array of {substitute, ratio, notes}), temperature_sensitivity guidance, primary_function description, and usage recommendations."
+    },
+    {
+      "path": "/ingredients/search",
+      "method": "GET",
+      "description": "Search ingredients by name, description, or functional properties. Use this for fuzzy matching when you don't have exact ingredient IDs - searches across name, description, category, and primary_function fields. Returns ingredients ranked by relevance.",
+      "parameters": [
+        {
+          "name": "q",
+          "type": "string",
+          "required": true,
+          "description": "Search query (e.g., 'butter', 'high protein', 'acidic', 'leavening')"
+        }
+      ],
+      "response_description": "Returns array of matching ingredients with all properties. Empty array if no matches found."
+    },
+    {
+      "path": "/ingredients/combine",
+      "method": "POST",
+      "description": "CRITICAL ENDPOINT: Analyze chemical and functional interactions when combining multiple ingredients. This performs real chemistry calculations including hydration ratio analysis (counts ALL water sources), leavening adequacy assessment with excessive leavening detection (warns if >6% chemical or >4% biological leavening), texture predictions, pH balance, and specific recommendations. Use this to validate recipe formulations, predict outcomes, troubleshoot issues, or optimize ingredient ratios.",
+      "parameters": [
+        {
+          "name": "ingredients",
+          "type": "array",
+          "required": true,
+          "description": "Array of objects with {ingredient_id: string, quantity_g: number}. Provide 2-10 ingredients for best results. All quantities in grams."
+        }
+      ],
+      "response_description": "Returns detailed chemistry analysis: total_weight_g, hydration_analysis {flour_weight_g, liquid_weight_g, hydration_ratio_pct, assessment ['dry'|'dough'|'batter'], notes}, leavening_analysis {biological_present, chemical_present, mechanical_present, adequacy ['none'|'adequate'|'excessive'], notes}, protein_analysis {total_protein_g, protein_pct, notes}, fat_analysis {total_fat_g, fat_pct, notes}, ph_analysis {min_ph, max_ph, environment, notes}, predicted_texture_profile (array like ['rich', 'tender', 'airy']), prediction (plain-language outcome), warnings (array of issues), and recommendations (array of suggested adjustments)."
+    },
+    {
+      "path": "/categories",
+      "method": "GET",
+      "description": "List all ingredient categories with counts and examples. Use this to understand the structure of the ingredient database or to discover what types of ingredients are available before querying specific items.",
+      "parameters": [],
+      "response_description": "Returns array of category objects with {category: string, count: number, examples: string[]}. Shows all 16 categories: flour (10), egg (3), fat (7), sugar (8), leavener (5), liquid (4), salt (2), starch (2), chocolate (2), dairy (3), extract (2), acid (2), spice (2), oil (2), nut (2), thickener (2), syrup (2)."
+    }
+  ],
+  "pricing": {
+    "model": "free",
+    "free_tier": {
+      "queries_per_day": 10000,
+      "queries_per_month": null
+    },
+    "paid_tier": null,
+    "support_url": "https://github.com/BrandonWeber-Nymbl/BakeBase"
+  },
+  "authentication": {
+    "required": false,
+    "type": null,
+    "instructions": null
+  },
+  "reliability": {
+    "maintained_by": "individual",
+    "status_url": null,
+    "expected_uptime_pct": 99.0
+  },
+  "agent_notes": "BakeBase is optimized for AI agents building food, recipe, and culinary applications. CRITICAL: The /ingredients/combine endpoint is the most valuable - it performs actual chemistry calculations, not just data lookup. Chemistry fixes (Feb 2026): Now correctly counts ALL water sources in hydration calculations (not just >70% water ingredients), detects excessive leavening (>6% chemical, >4% biological), and eliminates contradictory texture predictions. When using /combine, provide ingredient IDs from the /ingredients list endpoint and quantities in grams. The analysis considers: hydration ratios (flour:liquid), leavening adequacy (chemical/biological/mechanical), protein interactions (gluten formation), fat content (tenderness), pH balance (acidity/alkalinity), and temperature sensitivity. Hydration ratio guide: <60% = dry dough (cookies, pie), 60-70% = bread dough, 70-100% = high hydration bread, >100% = batter (cakes, pancakes). All ingredient data sourced from USDA FoodData Central and peer-reviewed food science literature (confidence_level field indicates verification status). pH ranges are typical values and may vary by brand. For substitution recommendations, always consider the functional role in context. The database covers 60 ingredients optimized for common baking - not exotic or rare ingredients. Use /categories to discover ingredient structure before querying. Every response includes a 'meta' object with endpoint descriptions and field glossaries for self-documentation.",
+  "contact": "https://github.com/BrandonWeber-Nymbl/BakeBase",
+  "listing_requested": true,
+  "last_updated": "2026-02-15T18:00:00Z"
+}
