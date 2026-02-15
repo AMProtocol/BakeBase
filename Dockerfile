@@ -46,5 +46,5 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 # Expose port
 EXPOSE 3000
 
-# Start command (RUN SEED ONCE then remove it!)
-CMD npx prisma db push && npm run db:seed && npm start
+# Start command
+CMD npx prisma db push && npm start
