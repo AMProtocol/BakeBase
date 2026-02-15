@@ -8,7 +8,7 @@ COPY package*.json ./
 COPY tsconfig.json ./
 
 # Install dependencies
-RUN npm ci
+RUN npm install
 
 # Copy source code
 COPY src ./src
@@ -28,7 +28,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install production dependencies only
-RUN npm ci --only=production
+RUN npm install --only=production
 
 # Copy built files and Prisma schema
 COPY --from=builder /app/dist ./dist
