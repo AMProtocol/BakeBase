@@ -7,14 +7,14 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.json ./
 
-# Install dependencies
+# Copy Prisma schema (needed for postinstall script)
+COPY prisma ./prisma
+
+# Install dependencies (runs prisma generate via postinstall)
 RUN npm install
 
 # Copy source code
 COPY src ./src
-
-# Generate Prisma Client
-RUN npx prisma generate
 
 # Build TypeScript
 RUN npm run build
@@ -27,16 +27,15 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install production dependencies only
+# Copy Prisma schema (needed for postinstall script)
+COPY prisma ./prisma
+
+# Install production dependencies only (runs prisma generate via postinstall)
 RUN npm install --only=production
 
-# Copy built files and Prisma schema
+# Copy built files and Prisma client
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY src/prisma ./src/prisma
-
-# Generate Prisma Client (required for runtime)
-RUN npx prisma generate
 
 # Expose port
 EXPOSE 3000
