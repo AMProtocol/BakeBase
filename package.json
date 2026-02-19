@@ -10,7 +10,8 @@
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "manifest:export": "tsx -e \"import { agentManifest } from './src/config/agent-manifest'; import { writeFileSync } from 'fs'; writeFileSync('agent-manifest.json', JSON.stringify(agentManifest, null, 2)); console.log('agent-manifest.json updated');\""
   },
   "keywords": [
     "baking",

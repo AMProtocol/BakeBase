@@ -52,7 +52,8 @@ export async function requireApiKey(
       meta: {
         endpoint_description:
           'API key required. Send it in the Authorization header as Bearer <key> or in the X-API-Key header.',
-        field_glossary: {}
+        field_glossary: {},
+        manifest: '/.well-known/agent-manifest.json'
       }
     });
     return;
@@ -71,7 +72,8 @@ export async function requireApiKey(
         error: 'Unauthorized',
         meta: {
           endpoint_description: 'Invalid API key.',
-          field_glossary: {}
+          field_glossary: {},
+          manifest: '/.well-known/agent-manifest.json'
         }
       });
       return;
@@ -83,7 +85,8 @@ export async function requireApiKey(
         error: 'Unauthorized',
         meta: {
           endpoint_description: 'API key has been revoked.',
-          field_glossary: {}
+          field_glossary: {},
+          manifest: '/.well-known/agent-manifest.json'
         }
       });
       return;
@@ -95,7 +98,8 @@ export async function requireApiKey(
         error: 'Unauthorized',
         meta: {
           endpoint_description: 'API key has expired.',
-          field_glossary: {}
+          field_glossary: {},
+          manifest: '/.well-known/agent-manifest.json'
         }
       });
       return;

@@ -16,19 +16,21 @@ router.get('/', (_req, res) => {
     description: 'AI-first food science reference API for baking ingredients',
     version: '1.0.0',
     status: 'healthy',
+    agent_first_step:
+      'Fetch /.well-known/agent-manifest.json before querying. It contains auth and usage.',
     links: {
+      manifest: '/.well-known/agent-manifest.json',
       agents: '/agents',
       ingredients: '/ingredients',
       categories: '/categories',
       combine: '/ingredients/combine',
       docs: '/docs/openapi.json',
-      manifest: '/.well-known/agent-manifest.json',
       health: '/health',
       api_keys: '/dashboard/keys',
     },
     meta: {
       description:
-        'BakeBase root. If you are an AI agent, start at /agents for usage guidance or /ingredients to browse the ingredient database.',
+        'BakeBase root. AI agents: see /.well-known/agent-manifest.json for auth and usage.',
     },
   });
 });

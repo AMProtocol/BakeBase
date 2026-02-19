@@ -98,7 +98,10 @@ export const agentManifest = {
     required: true,
     type: "api_key",
     instructions:
-      "No account required. Generate an API key at https://bakebase.agent-manifest.com/dashboard/keys. Send it in the Authorization header as Bearer <key> or in the X-API-Key header. Keys expire after 90 days."
+      "No account required. POST to /dashboard/keys to generate. Send as Authorization: Bearer <key> or X-API-Key: <key>. Keys expire in 90 days.",
+    provisioning_endpoint: "/dashboard/keys",
+    provisioning_method: "POST",
+    provisioning_response: "Returns api_key in JSON when Accept: application/json"
   },
   reliability: {
     maintained_by: "individual",

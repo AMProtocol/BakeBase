@@ -95,9 +95,9 @@ export class KeysController {
   }
 
   /**
-   * POST /dashboard/keys - Generate new API key (form submit)
+   * POST /dashboard/keys - Generate new API key (form submit or JSON when Accept: application/json)
    */
-  static async createKey(_req: Request, res: Response): Promise<void> {
+  static async createKey(req: Request, res: Response): Promise<void> {
     try {
       const { key, keyHash, keyPrefix } = generateApiKey();
       const expiresAt = new Date();
@@ -110,6 +110,17 @@ export class KeysController {
           expires_at: expiresAt
         }
       });
+
+      const acceptsJson = req.headers.accept?.includes('application/json');
+      if (acceptsJson) {
+        res.status(200).json({
+          success: true,
+          api_key: key,
+          expires_in_days: KEY_EXPIRY_DAYS,
+          usage: 'Send as Authorization: Bearer <key> or X-API-Key: <key>'
+        });
+        return;
+      }
 
       res.setHeader('Content-Type', 'text/html');
       res.status(200).send(SUCCESS_HTML(key));
