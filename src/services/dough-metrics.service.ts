@@ -28,7 +28,10 @@ function isWater(ing: Ingredient): boolean {
 }
 
 function isSalt(ing: Ingredient): boolean {
-  return ing.category === 'salt' || ing.name.toLowerCase().includes('salt');
+  if (ing.category === 'salt') return true;
+  const n = ing.name.toLowerCase();
+  if (n.includes('unsalted')) return false;
+  return /\bsalt\b/.test(n) || n.endsWith(' salt');
 }
 
 function isYeast(ing: Ingredient): boolean {
