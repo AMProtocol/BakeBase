@@ -9,10 +9,11 @@ export class DocsController {
   static getAgentGuide(_req: Request, res: Response): void {
     const guide: AgentGuide = {
       api_name: 'BakeBase',
-      version: '1.1.0',
-      purpose: 'AI-first food science reference API focused on the functional properties of baking ingredients. Provides structured, scientifically accurate data about ingredient chemistry, interactions, and predicted baking outcomes.',
+      version: '1.2.0',
+      purpose:
+        'Agent reference for baking: ingredient catalog, chemistry, and validation of external recipes. Not a recipe library.',
       recommended_usage:
-        'API key required for all data endpoints. Get a key at /dashboard/keys (no account needed). For full recipes with pan scaling: GET /formulations/ny-cheesecake?pan_diameter_in=12&analyze=true — returns gram weights, ingredient IDs, baking steps, and chemistry. Use /baking/pan-scale for (D/d)² math. Use /ingredients/combine to validate any custom gram list. Discovery: find BakeBase via AgentManifest registry (api.agent-manifest.com).',
+        'Discover via AgentManifest registry. Get a key at /dashboard/keys. When a user provides or you parse a recipe (web, book, chat), POST /baking/validate-mix with ingredient names and grams to ground the formula in catalog data and ratio checks. Use /ingredients/* for detail and substitutions; /ingredients/combine when you already have IDs; /baking/pan-scale for pan math only.',
       available_endpoints: [
         {
           path: 'GET /ingredients',
@@ -33,11 +34,11 @@ export class DocsController {
           when_to_use: 'Find ingredients when you have partial name or want to search by role (e.g., "gluten", "tender", "brown")'
         },
         {
-          path: 'GET /formulations/:id',
-          method: 'GET',
-          description: 'Reference recipe scaled to a round pan diameter with BakeBase ingredient IDs',
+          path: 'POST /baking/validate-mix',
+          method: 'POST',
+          description: 'Validate external recipe grams against catalog and baking ratios',
           when_to_use:
-            'Primary agent path for baked goods with known templates. Example: GET /formulations/ny-cheesecake?pan_diameter_in=12&analyze=true for a 12-inch springform cheesecake with crust + filling grams and chemistry.'
+            'Primary safeguard: user wants baguette/bread/cake — parse or cite grams, POST here with intent bread. Returns hydration, validation checks, chemistry. Unknown ingredients return 422.'
         },
         {
           path: 'GET /baking/pan-scale',
@@ -109,7 +110,7 @@ export class DocsController {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       service: 'BakeBase API',
-      version: '1.1.0'
+      version: '1.2.0'
     });
   }
 }

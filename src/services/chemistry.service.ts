@@ -40,8 +40,16 @@ export class ChemistryService {
       return { type: 'cake_batter', confidence: 'medium', notes: 'Sweetened fat-flour batter.' };
     }
 
+    if (flourWeight > 0 && has('yeast')) {
+      return {
+        type: 'bread_dough',
+        confidence: 'high',
+        notes: 'Yeasted dough — use /baking/validate-mix for baker’s hydration and ratio checks.'
+      };
+    }
+
     if (flourWeight > 0 && totalSugar < 15) {
-      return { type: 'bread_dough', confidence: 'low', notes: 'Flour-forward mix; confirm hydration and leavening.' };
+      return { type: 'bread_dough', confidence: 'medium', notes: 'Flour-forward mix; confirm hydration and leavening.' };
     }
 
     if (flourWeight > 0) {

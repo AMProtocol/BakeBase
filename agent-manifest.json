@@ -1,8 +1,8 @@
 {
   "spec_version": "agentmanifest-0.3",
   "name": "BakeBase",
-  "version": "1.1.0",
-  "description": "AI-first food science reference API for baking ingredients and scaled formulations. Provides ingredient chemistry, pan scaling math, reference recipes (e.g. NY cheesecake) with gram weights and IDs, and combine analysis with recipe classification (cheesecake_filling, graham_crust, etc.). Ideal for agents that must not hallucinate recipes: start at GET /formulations/:id?pan_diameter_in=12&analyze=true.",
+  "version": "1.2.0",
+  "description": "Agent reference API for baking — ingredient science, chemistry, and validation of external recipes (web, books, user input). Not a recipe library. Use POST /baking/validate-mix with gram weights from any source to map ingredients to the catalog, compute baker's hydration and salt/yeast ratios, and run combine analysis with pass/warn/fail checks.",
   "homepage": "https://bakebase.agent-manifest.com",
   "documentation": "https://bakebase.agent-manifest.com/agents",
   "categories": [
@@ -74,37 +74,30 @@
       "response_description": "Returns chemistry analysis including recipe_classification, baking_guidance, flourless-aware hydration_analysis (moisture_pct_of_batch when no flour), leavening_analysis, predicted_texture_profile, prediction, and warnings."
     },
     {
-      "path": "/formulations",
-      "method": "GET",
-      "description": "List reference baking formulations that scale by round pan diameter.",
-      "parameters": [],
-      "response_description": "Array of template summaries (id, name, reference pan, scaling_formula)."
-    },
-    {
-      "path": "/formulations/:id",
-      "method": "GET",
-      "description": "Build a scaled formulation with BakeBase ingredient IDs and optional chemistry.",
+      "path": "/baking/validate-mix",
+      "method": "POST",
+      "description": "PRIMARY FOR AGENTS: Validate an external ingredient list (e.g. parsed from a web recipe) by name + grams. Resolves to catalog IDs, merges duplicate lines, returns dough_metrics, full combine chemistry, and validation checks. Optional intent: bread, custard, cake, cookie, or auto.",
       "parameters": [
         {
-          "name": "pan_diameter_in",
-          "type": "number",
+          "name": "ingredients",
+          "type": "array",
           "required": true,
-          "description": "Target round pan diameter in inches (e.g. 12 for a 12-inch springform)."
+          "description": "Array of { ingredient_name, quantity_g }. Names matched to catalog (exact or search)."
         },
         {
-          "name": "reference_diameter_in",
-          "type": "number",
+          "name": "intent",
+          "type": "string",
           "required": false,
-          "description": "Override reference diameter; default is the template reference pan."
+          "description": "bread | custard | cake | cookie | auto (default auto)"
         },
         {
-          "name": "analyze",
-          "type": "boolean",
+          "name": "source_url",
+          "type": "string",
           "required": false,
-          "description": "If true, include chemistry for filling, crust, and full batch."
+          "description": "Optional URL of recipe being validated (for agent traceability only)"
         }
       ],
-      "response_description": "Scaled lines with quantity_g and ingredient_id, baking steps, scale_factor, and optional chemistry array."
+      "response_description": "resolved_ingredients, dough_metrics, chemistry, validation { status, checks }, agent_guidance. Does not return cooking steps."
     },
     {
       "path": "/baking/pan-scale",
@@ -161,7 +154,7 @@
     "uptime_percentage": 99,
     "avg_response_time_ms": 120
   },
-  "agent_notes": "AGENT WORKFLOW (anti-hallucination): 1) Discover BakeBase via AgentManifest registry. 2) POST /api/keys for a key. 3) For cheesecake in a springform: GET /formulations/ny-cheesecake?pan_diameter_in=12&analyze=true — returns gram weights, ingredient IDs, baking steps, and chemistry. 4) Optional: GET /baking/pan-scale?from_diameter_in=9&to_diameter_in=12 for scale_factor only. 5) POST /ingredients/combine with {ingredient_id, quantity_g} to validate custom mixes; response includes recipe_classification and baking_guidance. Quantities in grams only (quantity_g). Combine classifies cheesecakes and flourless custards separately from bread dough. Ingredient data from USDA FoodData Central where noted.",
+  "agent_notes": "BakeBase is a safeguard for baking agents — NOT a recipe site. WORKFLOW: 1) Discover via AgentManifest registry (api.agent-manifest.com). 2) POST /api/keys. 3) User wants to bake something → agent may fetch a web recipe or user grams separately. 4) POST /baking/validate-mix with { ingredients: [{ingredient_name, quantity_g}], intent: 'bread', source_url } — returns catalog mapping, baker's hydration, salt/yeast %, chemistry, validation status. 5) Use GET /ingredients and /ingredients/search for substitution and science. 6) POST /ingredients/combine when you already have ingredient_ids. 7) GET /baking/pan-scale for round-pan scaling math only. BakeBase does not certify that a web recipe 'works' — it flags implausible ratios and unknown ingredients.",
   "contact": "mailto:brandon@agent-manifest.com",
   "listing_requested": true,
   "last_updated": "2026-10-03T00:00:00.000Z"
