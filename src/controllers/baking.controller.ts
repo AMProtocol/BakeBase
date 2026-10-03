@@ -1,18 +1,39 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { MixValidationService } from '../services/mix-validation.service';
+import { UnitConversionService } from '../services/unit-conversion.service';
 import { Meta } from '../types';
 
-const lineSchema = z.object({
-  ingredient_name: z.string().min(1),
-  quantity_g: z.number().positive()
+const lineSchema = z
+  .object({
+    ingredient_name: z.string().min(1),
+    quantity_g: z.number().positive().optional(),
+    quantity: z.number().positive().optional(),
+    unit: z.string().min(1).optional()
+  })
+  .refine((l) => (l.quantity_g !== undefined) !== (l.quantity !== undefined && l.unit !== undefined), {
+    message: 'Provide quantity_g OR both quantity and unit per ingredient'
+  });
+
+const processSchema = z.object({
+  yeast_type: z.enum(['instant', 'active_dry', 'fresh', 'unknown']).optional(),
+  cold_retard_hours: z.number().nonnegative().optional(),
+  room_temp_bulk_hours: z.number().nonnegative().optional(),
+  style: z.enum(['baguette', 'sandwich_loaf', 'quick', 'unknown']).optional()
 });
 
 const validateMixSchema = z.object({
   ingredients: z.array(lineSchema).min(1),
   intent: z.enum(['auto', 'bread', 'custard', 'cake', 'cookie']).optional(),
   source_label: z.string().optional(),
-  source_url: z.string().url().optional()
+  source_url: z.string().url().optional(),
+  process: processSchema.optional()
+});
+
+const convertQuerySchema = z.object({
+  ingredient_name: z.string().min(1),
+  amount: z.coerce.number().positive(),
+  unit: z.string().min(1)
 });
 
 const scaleQuerySchema = z.object({
@@ -21,6 +42,55 @@ const scaleQuerySchema = z.object({
 });
 
 export class BakingController {
+  static async convertUnits(req: Request, res: Response): Promise<void> {
+    const parsed = convertQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({
+        success: false,
+        error: parsed.error.message,
+        meta: { endpoint_description: 'Convert to grams using catalog density', field_glossary: {} }
+      });
+      return;
+    }
+
+    try {
+      const data = await UnitConversionService.convertByIngredientName(
+        parsed.data.ingredient_name,
+        parsed.data.amount,
+        parsed.data.unit
+      );
+      res.json({
+        success: true,
+        data: {
+          ...data,
+          disclaimer:
+            'Volume-to-weight uses catalog density; cup measures vary by packing. Prefer grams from a scale when possible.'
+        },
+        meta: {
+          endpoint_description: 'Reference conversion — not a recipe source.',
+          field_glossary: {}
+        }
+      });
+    } catch (e) {
+      res.status(422).json({
+        success: false,
+        error: e instanceof Error ? e.message : 'Conversion failed',
+        meta: { endpoint_description: 'Conversion failed', field_glossary: {} }
+      });
+    }
+  }
+
+  static listUnits(_req: Request, res: Response): void {
+    res.json({
+      success: true,
+      data: {
+        units: UnitConversionService.supportedUnits(),
+        note: 'GET /baking/convert?ingredient_name=&amount=&unit='
+      },
+      meta: { endpoint_description: 'Supported unit strings for /baking/convert', field_glossary: {} }
+    });
+  }
+
   static panScale(req: Request, res: Response): void {
     const parsed = scaleQuerySchema.safeParse(req.query);
     if (!parsed.success) {

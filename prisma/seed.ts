@@ -10,8 +10,9 @@ async function main() {
   const hasWater = await prisma.ingredient.findFirst({ where: { name: 'Water' } });
   const hasSalt = await prisma.ingredient.findFirst({ where: { name: 'Table Salt' } });
   const hasGraham = await prisma.ingredient.findFirst({ where: { name: 'Graham Cracker Crumbs' } });
+  const hasMalt = await prisma.ingredient.findFirst({ where: { name: 'Diastatic Malt Powder' } });
 
-  if (existing >= MIN_CATALOG_ROWS && hasWater && hasSalt && hasGraham) {
+  if (existing >= MIN_CATALOG_ROWS && hasWater && hasSalt && hasGraham && hasMalt) {
     console.log(`✅ Ingredient catalog OK (${existing} rows), skip seed`);
     return;
   }
@@ -2113,6 +2114,168 @@ async function main() {
     }
   ];
 
+  const enrichments = [
+    {
+      name: 'Diastatic Malt Powder',
+      category: 'enrichment',
+      description: 'Sprouted barley malt; provides enzymes and sugars for yeast activity and crust color in lean breads.',
+      water_content_pct: 5.0,
+      protein_content_pct: 10.0,
+      fat_content_pct: 1.5,
+      starch_content_pct: 70.0,
+      sugar_content_pct: 10.0,
+      fiber_content_pct: 2.0,
+      ph_level_min: 5.5,
+      ph_level_max: 6.5,
+      density_g_per_ml: 0.55,
+      standard_measurement_unit: 'weight',
+      gluten_forming: false,
+      emulsifying: false,
+      leavening_type: null,
+      hygroscopic: true,
+      typical_hydration_ratio: null,
+      flavor_profile: ['malty', 'sweet', 'mild'],
+      primary_function: 'Feeds yeast and improves browning in lean doughs; typical 0.5–2% of flour weight.',
+      interactions: [
+        { ingredient: 'yeast', effect: 'Provides fermentable sugars', notes: 'Common in baguettes and sandwich loaves' },
+        { ingredient: 'flour', effect: 'Enzymes break starch to sugars', notes: 'Use sparingly' }
+      ],
+      substitution_ratio: [
+        { substitute: 'non-diastatic malt', ratio: '1:1', notes: 'Color/flavor only, less enzyme activity' },
+        { substitute: 'honey', ratio: '1:1 by weight', notes: 'Different flavor, also feeds yeast' }
+      ],
+      temperature_sensitivity: 'Enzyme activity reduced above ~140°F (60°C) during bake.',
+      source_notes: 'Food science consensus, artisan bread references',
+      confidence_level: 'community'
+    },
+    {
+      name: 'Vital Wheat Gluten',
+      category: 'enrichment',
+      description: 'Concentrated wheat gluten protein; strengthens low-protein or whole-grain doughs.',
+      water_content_pct: 8.0,
+      protein_content_pct: 75.0,
+      fat_content_pct: 2.0,
+      starch_content_pct: 5.0,
+      sugar_content_pct: 0.0,
+      fiber_content_pct: 1.0,
+      ph_level_min: 6.0,
+      ph_level_max: 7.0,
+      density_g_per_ml: 0.6,
+      standard_measurement_unit: 'weight',
+      gluten_forming: true,
+      emulsifying: false,
+      leavening_type: null,
+      hygroscopic: false,
+      typical_hydration_ratio: null,
+      flavor_profile: ['neutral'],
+      primary_function: 'Increases dough strength and gas retention; typical 1–2% of flour in whole wheat or rye blends.',
+      interactions: [
+        { ingredient: 'water', effect: 'Absorbs water strongly', notes: 'May need slightly higher hydration' },
+        { ingredient: 'whole wheat flour', effect: 'Compensates for weaker gluten', notes: 'Common pairing' }
+      ],
+      substitution_ratio: [{ substitute: 'bread flour', ratio: 'N/A', notes: 'Use higher-protein flour instead of adding VWG' }],
+      temperature_sensitivity: 'Protein sets with heat like gluten in flour.',
+      source_notes: 'Food science consensus',
+      confidence_level: 'verified'
+    },
+    {
+      name: 'Nonfat Dry Milk Powder',
+      category: 'dairy',
+      description: 'Dehydrated skim milk solids; adds protein, lactose, and browning to dough and pastry.',
+      water_content_pct: 3.0,
+      protein_content_pct: 36.0,
+      fat_content_pct: 1.0,
+      starch_content_pct: 0.0,
+      sugar_content_pct: 52.0,
+      fiber_content_pct: 0.0,
+      ph_level_min: 6.5,
+      ph_level_max: 7.0,
+      density_g_per_ml: 0.55,
+      standard_measurement_unit: 'weight',
+      gluten_forming: false,
+      emulsifying: false,
+      leavening_type: null,
+      hygroscopic: true,
+      typical_hydration_ratio: null,
+      flavor_profile: ['dairy', 'mild', 'sweet'],
+      primary_function: 'Softens crumb and promotes Maillard browning; typical 2–5% of flour.',
+      interactions: [
+        { ingredient: 'yeast', effect: 'Lactose ferments slowly', notes: 'Milk breads often use scalded milk or powder' },
+        { ingredient: 'sugar', effect: 'Adds sweetness and solids', notes: 'Enriched doughs' }
+      ],
+      substitution_ratio: [
+        { substitute: 'milk', ratio: '1:8 powder to liquid milk by weight', notes: 'Adjust hydration' }
+      ],
+      temperature_sensitivity: 'Browns readily due to milk proteins and lactose.',
+      source_notes: 'USDA FoodData Central (dry milk), baking references',
+      confidence_level: 'verified'
+    },
+    {
+      name: 'Sourdough Starter',
+      category: 'leavener',
+      description: 'Fermented flour-and-water culture (typical 100% hydration); biological leavening and acid development.',
+      water_content_pct: 50.0,
+      protein_content_pct: 5.0,
+      fat_content_pct: 0.5,
+      starch_content_pct: 20.0,
+      sugar_content_pct: 1.0,
+      fiber_content_pct: 1.0,
+      ph_level_min: 3.8,
+      ph_level_max: 4.5,
+      density_g_per_ml: 1.05,
+      standard_measurement_unit: 'weight',
+      gluten_forming: true,
+      emulsifying: false,
+      leavening_type: 'biological',
+      hygroscopic: false,
+      typical_hydration_ratio: 100.0,
+      flavor_profile: ['tangy', 'complex', 'fermented'],
+      primary_function: 'Leavens bread via wild yeast and bacteria; contributes acid for flavor and gluten conditioning.',
+      interactions: [
+        { ingredient: 'flour', effect: 'Contributes flour and water to total formula', notes: 'Baker’s % must include starter flour/water' },
+        { ingredient: 'commercial yeast', effect: 'Often combined in hybrid loaves', notes: 'Adjust yeast down' }
+      ],
+      substitution_ratio: [
+        { substitute: 'commercial yeast', ratio: 'Not 1:1', notes: 'Requires formula redesign' }
+      ],
+      temperature_sensitivity: 'Activity peaks around 75–85°F (24–29°C); slows in refrigerator.',
+      source_notes: 'Food science consensus; assume 100% hydration ripe starter',
+      confidence_level: 'community'
+    },
+    {
+      name: 'Semolina Flour',
+      category: 'flour',
+      description: 'Coarse durum wheat flour; used for dusting, pasta, and some artisan breads.',
+      water_content_pct: 11.0,
+      protein_content_pct: 13.0,
+      fat_content_pct: 1.5,
+      starch_content_pct: 72.0,
+      sugar_content_pct: 0.5,
+      fiber_content_pct: 3.0,
+      ph_level_min: 6.0,
+      ph_level_max: 7.0,
+      density_g_per_ml: 0.6,
+      standard_measurement_unit: 'weight',
+      gluten_forming: true,
+      emulsifying: false,
+      leavening_type: null,
+      hygroscopic: false,
+      typical_hydration_ratio: 62.0,
+      flavor_profile: ['nutty', 'wheaty', 'golden'],
+      primary_function: 'Adds color and texture; often used to dust peels and couche to reduce sticking.',
+      interactions: [
+        { ingredient: 'water', effect: 'Absorbs water more slowly than fine AP flour', notes: 'Adjust mix time' },
+        { ingredient: 'bread dough', effect: 'Dusting only — not usually in bulk formula', notes: 'Rice flour also used for dusting' }
+      ],
+      substitution_ratio: [
+        { substitute: 'rice flour', ratio: '1:1 for dusting', notes: 'For couche/banneton only' }
+      ],
+      temperature_sensitivity: 'High protein durum; strong but less elastic than bread flour.',
+      source_notes: 'USDA FoodData Central (semolina), food science consensus',
+      confidence_level: 'verified'
+    }
+  ];
+
   // Combine all ingredients
   const allIngredients = [
     ...flours,
@@ -2131,7 +2294,8 @@ async function main() {
     ...oils,
     ...nuts,
     ...thickeners,
-    ...crackers
+    ...crackers,
+    ...enrichments
   ];
 
   const catalogByName = new Map<string, (typeof allIngredients)[number]>();
@@ -2170,6 +2334,7 @@ async function main() {
   console.log(`   - ${nuts.length} nuts`);
   console.log(`   - ${thickeners.length} thickeners`);
   console.log(`   - ${crackers.length} cracker products`);
+  console.log(`   - ${enrichments.length} enrichments / specialty`);
 }
 
 main()

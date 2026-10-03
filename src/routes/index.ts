@@ -15,7 +15,7 @@ router.get('/', (_req, res) => {
   res.json({
     service: 'BakeBase',
     description: 'AI-first food science reference API for baking ingredients',
-    version: '1.2.0',
+    version: '1.3.0',
     status: 'healthy',
     agent_first_step:
       'Fetch /.well-known/agent-manifest.json before querying. It contains auth and usage.',
@@ -26,6 +26,7 @@ router.get('/', (_req, res) => {
       categories: '/categories',
       combine: '/ingredients/combine',
       validate_mix: '/baking/validate-mix',
+      convert: '/baking/convert',
       pan_scale: '/baking/pan-scale',
       docs: '/docs/openapi.json',
       health: '/health',
@@ -61,6 +62,8 @@ router.get('/ingredients', requireApiKey, IngredientController.getAll);
 router.post('/ingredients/combine', requireApiKey, IngredientController.combine);
 router.get('/categories', requireApiKey, CategoryController.getAll);
 router.post('/baking/validate-mix', requireApiKey, BakingController.validateMix);
+router.get('/baking/convert', requireApiKey, BakingController.convertUnits);
+router.get('/baking/units', requireApiKey, BakingController.listUnits);
 router.get('/baking/pan-scale', requireApiKey, BakingController.panScale);
 
 export default router;

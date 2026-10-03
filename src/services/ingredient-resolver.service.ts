@@ -16,6 +16,19 @@ export interface ResolvedQuantity {
 }
 
 export class IngredientResolverService {
+  static async findByName(name: string) {
+    const exact = await prisma.ingredient.findFirst({
+      where: { name: { equals: name, mode: 'insensitive' } }
+    });
+    if (exact) return exact;
+
+    const hits = await prisma.ingredient.findMany({
+      where: { name: { contains: name, mode: 'insensitive' } },
+      take: 1
+    });
+    return hits[0] ?? null;
+  }
+
   static async resolve(lines: NamedQuantity[]): Promise<{ resolved: ResolvedQuantity[]; unresolved: string[] }> {
     const resolved: ResolvedQuantity[] = [];
     const unresolved: string[] = [];

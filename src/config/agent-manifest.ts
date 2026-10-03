@@ -5,7 +5,7 @@
 export const agentManifest = {
   spec_version: "agentmanifest-0.3",
   name: "BakeBase",
-  version: "1.2.0",
+  version: "1.3.0",
   description: "Agent reference API for baking — ingredient science, chemistry, and validation of external recipes (web, books, user input). Not a recipe library. Use POST /baking/validate-mix with gram weights from any source to map ingredients to the catalog, compute baker's hydration and salt/yeast ratios, and run combine analysis with pass/warn/fail checks.",
   homepage: "https://bakebase.agent-manifest.com",
   documentation: "https://bakebase.agent-manifest.com/agents",
@@ -111,6 +111,24 @@ export const agentManifest = {
       response_description: "scale_factor and formula."
     },
     {
+      path: "/baking/convert",
+      method: "GET",
+      description: "Convert volume or weight units to grams using catalog density_g_per_ml for an ingredient.",
+      parameters: [
+        { name: "ingredient_name", type: "string", required: true, description: "Catalog ingredient name (e.g. All-Purpose Flour)." },
+        { name: "amount", type: "number", required: true, description: "Numeric amount in the given unit." },
+        { name: "unit", type: "string", required: true, description: "cup, tbsp, tsp, ml, g, oz, lb, etc." }
+      ],
+      response_description: "quantity_g and conversion note; cup measures are approximate."
+    },
+    {
+      path: "/baking/units",
+      method: "GET",
+      description: "List supported unit strings for /baking/convert.",
+      parameters: [],
+      response_description: "Array of unit names."
+    },
+    {
       path: "/categories",
       method: "GET",
       description: "List all ingredient categories with counts and examples. Use this to understand the structure of the ingredient database or to discover what types of ingredients are available before querying specific items.",
@@ -147,7 +165,7 @@ export const agentManifest = {
     avg_response_time_ms: 120
   },
   agent_notes:
-    "BakeBase is a safeguard for baking agents — NOT a recipe site. WORKFLOW: 1) Discover via AgentManifest registry (api.agent-manifest.com). 2) POST /api/keys. 3) User wants to bake something → agent may fetch a web recipe or user grams separately. 4) POST /baking/validate-mix with { ingredients: [{ingredient_name, quantity_g}], intent: 'bread', source_url } — returns catalog mapping, baker's hydration, salt/yeast %, chemistry, validation status. 5) Use GET /ingredients and /ingredients/search for substitution and science. 6) POST /ingredients/combine when you already have ingredient_ids. 7) GET /baking/pan-scale for round-pan scaling math only. BakeBase does not certify that a web recipe 'works' — it flags implausible ratios and unknown ingredients.",
+    "BakeBase is a safeguard for baking agents — NOT a recipe site. WORKFLOW: 1) Discover via AgentManifest registry. 2) POST /api/keys. 3) Parse a web recipe into ingredients (grams preferred, or quantity+unit). 4) POST /baking/validate-mix with intent bread and optional process { yeast_type, cold_retard_hours, style: baguette } for fermentation heuristics. 5) GET /baking/convert for cup/tsp→grams when needed. 6) GET /ingredients/* for substitutions. BakeBase flags bad ratios, unknown ingredients, and fermentation mismatches — it does not author steps or guarantee success.",
   contact: "mailto:brandon@agent-manifest.com",
   listing_requested: true,
   last_updated: "2026-10-03T00:00:00.000Z"

@@ -1,15 +1,25 @@
 import { Ingredient } from '@prisma/client';
 import { ChemistryService } from './chemistry.service';
+import { FermentationProcessHints, runFermentationHeuristics } from './fermentation-heuristics.service';
 import { IngredientResolverService, NamedQuantity, ResolvedQuantity } from './ingredient-resolver.service';
+import { convertToGrams } from './unit-conversion.service';
 import { CombinedAnalysis, IngredientInput } from '../types';
 
 export type BakeIntent = 'auto' | 'bread' | 'custard' | 'cake' | 'cookie';
 
+export interface IngredientLineInput {
+  ingredient_name: string;
+  quantity_g?: number;
+  quantity?: number;
+  unit?: string;
+}
+
 export interface MixValidationInput {
-  ingredients: NamedQuantity[];
+  ingredients: IngredientLineInput[];
   intent?: BakeIntent;
   source_label?: string;
   source_url?: string;
+  process?: FermentationProcessHints;
 }
 
 export interface DoughMetrics {
@@ -80,7 +90,12 @@ function inferIntent(metrics: DoughMetrics, chemistry: CombinedAnalysis): BakeIn
   return 'cake';
 }
 
-function runChecks(intent: BakeIntent, metrics: DoughMetrics, chemistry: CombinedAnalysis): ValidationCheck[] {
+function runChecks(
+  intent: BakeIntent,
+  metrics: DoughMetrics,
+  chemistry: CombinedAnalysis,
+  fermentationChecks: ValidationCheck[]
+): ValidationCheck[] {
   const checks: ValidationCheck[] = [];
 
   if (metrics.flour_weight_g === 0) {
@@ -159,6 +174,8 @@ function runChecks(intent: BakeIntent, metrics: DoughMetrics, chemistry: Combine
     checks.push({ id: 'chemistry_warning', severity: 'warn', message: w });
   }
 
+  checks.push(...fermentationChecks);
+
   if (checks.length === 0) {
     checks.push({
       id: 'no_flags',
@@ -170,9 +187,54 @@ function runChecks(intent: BakeIntent, metrics: DoughMetrics, chemistry: Combine
   return checks;
 }
 
+async function linesToGrams(
+  lines: IngredientLineInput[]
+): Promise<{ gramsLines: NamedQuantity[]; conversions: Array<{ ingredient_name: string; note: string }>; errors: string[] }> {
+  const gramsLines: NamedQuantity[] = [];
+  const conversions: Array<{ ingredient_name: string; note: string }> = [];
+  const errors: string[] = [];
+
+  for (const line of lines) {
+    if (line.quantity_g !== undefined && line.quantity_g > 0) {
+      gramsLines.push({ ingredient_name: line.ingredient_name, quantity_g: line.quantity_g });
+      continue;
+    }
+
+    if (line.quantity !== undefined && line.unit) {
+      const exact = await IngredientResolverService.findByName(line.ingredient_name);
+      if (!exact) {
+        errors.push(`Cannot convert units — ingredient not found: ${line.ingredient_name}`);
+        continue;
+      }
+      try {
+        const conv = convertToGrams(line.quantity, line.unit, exact);
+        gramsLines.push({ ingredient_name: line.ingredient_name, quantity_g: conv.quantity_g });
+        conversions.push({ ingredient_name: line.ingredient_name, note: conv.note });
+      } catch (e) {
+        errors.push(e instanceof Error ? e.message : String(e));
+      }
+      continue;
+    }
+
+    errors.push(`Each ingredient needs quantity_g or quantity+unit: ${line.ingredient_name}`);
+  }
+
+  return { gramsLines, conversions, errors };
+}
+
 export class MixValidationService {
   static async validate(input: MixValidationInput) {
-    const { resolved, unresolved } = await IngredientResolverService.resolve(input.ingredients);
+    const { gramsLines, conversions, errors: convertErrors } = await linesToGrams(input.ingredients);
+    if (convertErrors.length > 0) {
+      return {
+        success: false as const,
+        error: convertErrors.join('; '),
+        unresolved: [],
+        partial_resolved: []
+      };
+    }
+
+    const { resolved, unresolved } = await IngredientResolverService.resolve(gramsLines);
 
     if (unresolved.length > 0) {
       return {
@@ -194,7 +256,18 @@ export class MixValidationService {
     const chemistry = ChemistryService.analyzeCombination(inputs, catalog);
     const metrics = computeMetrics(merged, catalog);
     const intent = input.intent === 'auto' || !input.intent ? inferIntent(metrics, chemistry) : input.intent;
-    const checks = runChecks(intent, metrics, chemistry);
+
+    const yeastNames = merged
+      .map((m) => catalog.find((c) => c.id === m.ingredient_id))
+      .filter((c): c is Ingredient => Boolean(c && isYeast(c)))
+      .map((c) => c.name);
+
+    const fermentationChecks =
+      intent === 'bread' || intent === 'auto'
+        ? runFermentationHeuristics(metrics, input.process, yeastNames)
+        : [];
+
+    const checks = runChecks(intent, metrics, chemistry, fermentationChecks);
 
     const hasFail = checks.some((c) => c.severity === 'fail');
     const hasWarn = checks.some((c) => c.severity === 'warn');
@@ -211,6 +284,8 @@ export class MixValidationService {
         quantity_g: m.quantity_g,
         match: m.match
       })),
+      unit_conversions: conversions.length > 0 ? conversions : null,
+      process_hints: input.process ?? null,
       dough_metrics: metrics,
       chemistry,
       validation: {
@@ -221,7 +296,9 @@ export class MixValidationService {
         'BakeBase does not author recipes — it validates ingredient lists against the catalog and baking science.',
         'Resolve names to catalog entries; fuzzy matches are flagged via match=search.',
         'Use dough_metrics.bakers_hydration_pct for lean bread; combine for chemistry and classification.',
-        'Oven technique, fermentation time, and steam are outside this API.'
+        'Pass process.cold_retard_hours and process.yeast_type when parsing web recipes for fermentation heuristics.',
+        'Use quantity+unit on ingredients for cup/tsp conversion (density from catalog; packing varies).',
+        'Oven technique and steam are still outside this API.'
       ]
     };
   }

@@ -9,7 +9,7 @@ export class DocsController {
   static getAgentGuide(_req: Request, res: Response): void {
     const guide: AgentGuide = {
       api_name: 'BakeBase',
-      version: '1.2.0',
+      version: '1.3.0',
       purpose:
         'Agent reference for baking: ingredient catalog, chemistry, and validation of external recipes. Not a recipe library.',
       recommended_usage:
@@ -39,6 +39,12 @@ export class DocsController {
           description: 'Validate external recipe grams against catalog and baking ratios',
           when_to_use:
             'Primary safeguard: user wants baguette/bread/cake — parse or cite grams, POST here with intent bread. Returns hydration, validation checks, chemistry. Unknown ingredients return 422.'
+        },
+        {
+          path: 'GET /baking/convert',
+          method: 'GET',
+          description: 'Convert cups/tsp/etc. to grams using ingredient density',
+          when_to_use: 'When a web recipe uses volume measures — then pass grams or quantity+unit into validate-mix.'
         },
         {
           path: 'GET /baking/pan-scale',
