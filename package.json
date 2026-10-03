@@ -1,7 +1,7 @@
 {
   "name": "bakebase-api",
   "version": "1.6.0",
-  "description": "AI-first food science reference API for baking ingredients",
+  "description": "Agent reference API for baking — ingredient catalog, chemistry, and external recipe validation (validate-mix)",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

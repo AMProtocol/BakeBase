@@ -7,6 +7,7 @@ import { BakingController } from '../controllers/baking.controller';
 import { openApiSpec } from '../middleware/openapi';
 import { requireApiKey } from '../middleware/auth';
 import { keyProvisioningLimiter } from '../middleware/rateLimit';
+import { API_VERSION } from '../config/version';
 
 const router = Router();
 
@@ -15,7 +16,7 @@ router.get('/', (_req, res) => {
   res.json({
     service: 'BakeBase',
     description: 'AI-first food science reference API for baking ingredients',
-    version: '1.6.0',
+    version: API_VERSION,
     status: 'healthy',
     agent_first_step:
       'Fetch /.well-known/agent-manifest.json before querying. It contains auth and usage.',

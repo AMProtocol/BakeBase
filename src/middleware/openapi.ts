@@ -1,9 +1,12 @@
+import { API_VERSION } from '../config/version';
+
 export const openApiSpec = {
   openapi: '3.0.0',
   info: {
     title: 'BakeBase API',
-    version: '1.0.0',
-    description: 'AI-first food science reference API for baking ingredients. API key required for all data endpoints. Generate keys at /dashboard/keys.',
+    version: API_VERSION,
+    description:
+      'Agent reference API for baking: ingredient catalog, POST /ingredients/combine chemistry, and POST /baking/validate-mix for external recipe validation. Not a recipe library. API key required for data endpoints — generate at /dashboard/keys. See GET /agents and /.well-known/agent-manifest.json.',
     contact: {
       name: 'Brandon',
       url: 'https://github.com/AMProtocol/BakeBase',
@@ -37,7 +40,7 @@ export const openApiSpec = {
                     status: { type: 'string', example: 'healthy' },
                     timestamp: { type: 'string', format: 'date-time' },
                     service: { type: 'string', example: 'BakeBase API' },
-                    version: { type: 'string', example: '1.0.0' }
+                    version: { type: 'string', example: API_VERSION }
                   }
                 }
               }

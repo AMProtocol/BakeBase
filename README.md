@@ -1,17 +1,18 @@
 # BakeBase API
 
-**AI-first food science reference API for baking ingredients**
+**Agent reference API for baking** — ingredient catalog, chemistry, and **validation of external recipes**. Not a recipe library.
 
-BakeBase is production-ready REST API that serves structured, scientifically accurate data about baking ingredients and their functional properties. Designed specifically for AI agents, it provides clean schemas, semantic field names, rich metadata, and real chemistry calculations.
+Production: [bakebase.agent-manifest.com](https://bakebase.agent-manifest.com) · AMP manifest at `/.well-known/agent-manifest.json` · Current API version **1.6.0**.
 
-## 🎯 Core Features
+BakeBase is built for AI agents: discover via the [AgentManifest registry](https://api.agent-manifest.com), provision a key at `/dashboard/keys`, parse a user or web recipe into ingredient names and grams, then **`POST /baking/validate-mix`** for catalog mapping, ratio checks (bread, cake, cookie, custard), and pass/warn/fail validation. Use `/ingredients/*` and `/ingredients/combine` for catalog detail and ID-based chemistry.
 
-- **Comprehensive Ingredient Database**: 60 ingredients across 16 categories (flours, eggs, fats, sugars, leaveners, liquids, salts, starches, chocolates, dairy, extracts, acids, spices, oils, nuts, thickeners, syrups)
-- **Scientific Accuracy**: USDA FoodData Central values, peer-reviewed sources, validated chemistry calculations
-- **Real Chemistry Calculations**: The `/combine` endpoint performs accurate hydration ratio calculations (counts ALL water sources), protein interaction analysis, leavening adequacy assessment with excessive leavening detection, and texture predictions
-- **AI-Optimized**: Every endpoint returns `meta` objects with descriptions and field glossaries
-- **OpenAPI 3.0**: Complete specification at `/docs/openapi.json`
-- **Agent Guide**: Plain-language usage instructions at `/agents`
+## Core features
+
+- **`POST /baking/validate-mix`** — Primary agent workflow: name + grams (or `quantity` + `unit`), optional `intent` and `process` hints; returns `dough_metrics`, `flour_ratios`, `chemistry`, `validation.checks`
+- **Ingredient catalog** — ~60+ ingredients across 16 categories; search, categories, substitutions
+- **`POST /ingredients/combine`** — Chemistry when you already have `ingredient_id` + grams (hydration counts all water sources)
+- **`GET /baking/convert`** — Cups/tsp → grams (flour packing warnings in validate-mix; salt ~6 g/tsp)
+- **AMP-compliant** — `meta` glossaries, `/agents` guide, OpenAPI at `/docs/openapi.json`
 
 ## 📚 API Endpoints
 
@@ -31,9 +32,32 @@ curl http://localhost:3000/health
   "status": "healthy",
   "timestamp": "2024-01-15T10:30:00.000Z",
   "service": "BakeBase API",
-  "version": "1.0.0"
+  "version": "1.6.0"
 }
 ```
+
+---
+
+### Validate external recipe (agents)
+```bash
+POST /baking/validate-mix
+X-API-Key: <key>
+```
+
+```json
+{
+  "intent": "bread",
+  "source_url": "https://example.com/recipe",
+  "process": { "style": "enriched_bread", "yeast_type": "active_dry", "cold_retard_hours": 12 },
+  "ingredients": [
+    { "ingredient_name": "All-Purpose Flour", "quantity_g": 500 },
+    { "ingredient_name": "Whole Milk", "quantity_g": 120 },
+    { "ingredient_name": "Table Salt", "quantity": 1.5, "unit": "tsp" }
+  ]
+}
+```
+
+Use catalog names (`Granulated White Sugar`, `Whole Egg`, `Pure Vanilla Extract`). For brioche/enriched doughs, prefer **`dough_metrics.bakers_hydration_total_liquid_pct`** over free-water `bakers_hydration_pct`.
 
 ---
 
@@ -496,7 +520,14 @@ Occurs when flour proteins (glutenin + gliadin) hydrate and develop through mixi
 
 ---
 
-## ✨ Recent Improvements (Feb 2026)
+## Recent improvements (Oct 2026 — v1.5–1.6)
+
+- **Intent-aware validation** — Bread (lean/enriched/sourdough/pizza), cake, cookie, custard, quick-bread heuristics via `intent` and `process.style`
+- **Total liquid hydration** — `bakers_hydration_total_liquid_pct` for milk/egg-rich doughs (brioche no longer reads as 0% hydration)
+- **Cup flour packing** + **salt tsp heuristic** (~6 g/tsp); starter-adjusted metrics; fermentation/DDT process hints
+- **Unsalted butter** no longer counted as salt in ratio math
+
+## Earlier improvements (Feb 2026)
 
 ### Ingredient Database Expansion
 - **Expanded from 33 to 60 ingredients** (+82% increase)

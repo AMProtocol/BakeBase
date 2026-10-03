@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { API_VERSION } from '../config/version';
 import { AgentGuide } from '../types';
 
 export class DocsController {
@@ -9,7 +10,7 @@ export class DocsController {
   static getAgentGuide(_req: Request, res: Response): void {
     const guide: AgentGuide = {
       api_name: 'BakeBase',
-      version: '1.6.0',
+      version: API_VERSION,
       purpose:
         'Agent reference for baking: ingredient catalog, chemistry, and validation of external recipes. Not a recipe library.',
       recommended_usage:
@@ -38,7 +39,7 @@ export class DocsController {
           method: 'POST',
           description: 'Validate external recipe grams against catalog and baking ratios',
           when_to_use:
-            'Primary safeguard: user wants baguette/bread/cake — parse or cite grams, POST here with intent bread. Returns hydration, validation checks, chemistry. Unknown ingredients return 422.'
+            'Primary safeguard for any parsed recipe: map names to catalog, validate ratios (bread/cake/cookie/custard via intent or auto), cup packing and salt heuristics, optional fermentation process hints. Returns dough_metrics, flour_ratios, validation checks. Unknown ingredients → 422.'
         },
         {
           path: 'GET /baking/convert',
@@ -93,7 +94,8 @@ export class DocsController {
       key_concepts: {
         authentication:
           'API key required. Get one at /dashboard/keys. Send as Authorization: Bearer <key> or X-API-Key header. No account required. Keys expire in 90 days.',
-        hydration_ratio: 'The ratio of liquid to flour by weight. 70% hydration means 70g water per 100g flour. Critical for predicting dough consistency.',
+        hydration_ratio:
+          'Lean bread: dough_metrics.bakers_hydration_pct (free water ÷ flour). Enriched/brioche: bakers_hydration_total_liquid_pct (all ingredient water from catalog). Aligns with /combine hydration_analysis.',
         gluten_forming: 'Ingredients with proteins that form elastic networks when hydrated and mixed. Determines chewiness and structure.',
         leavening_type: 'How an ingredient creates rise: biological (yeast), chemical (baking powder/soda), mechanical (whipped eggs), or steam (water in butter).',
         typical_hydration_ratio: 'How much liquid an ingredient absorbs relative to its weight. Used in hydration calculations.',
@@ -116,7 +118,7 @@ export class DocsController {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       service: 'BakeBase API',
-      version: '1.2.0'
+      version: API_VERSION
     });
   }
 }

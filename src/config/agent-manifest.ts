@@ -2,11 +2,14 @@
 // Served at /.well-known/agent-manifest.json
 // See: https://github.com/AMProtocol/AMP
 
+import { API_VERSION } from './version';
+
 export const agentManifest = {
   spec_version: "agentmanifest-0.3",
   name: "BakeBase",
-  version: "1.6.0",
-  description: "Agent reference API for baking — ingredient science, chemistry, and validation of external recipes (web, books, user input). Not a recipe library. Use POST /baking/validate-mix with gram weights from any source to map ingredients to the catalog, compute baker's hydration and salt/yeast ratios, and run combine analysis with pass/warn/fail checks.",
+  version: API_VERSION,
+  description:
+    "Agent reference API for baking — ingredient catalog, chemistry, and validation of external recipes (web, books, user input). Not a recipe library. Primary workflow: POST /baking/validate-mix with ingredient names and grams (or quantity+unit) to map to the catalog, run intent-aware ratio checks (bread, cake, cookie, custard), and return pass/warn/fail validation.",
   homepage: "https://bakebase.agent-manifest.com",
   documentation: "https://bakebase.agent-manifest.com/agents",
   categories: ["food-science", "chemistry"],
@@ -104,7 +107,8 @@ export const agentManifest = {
           description: "Optional URL of recipe being validated (for agent traceability only)"
         }
       ],
-      response_description: "resolved_ingredients, unit_conversions, volume_conversions, dough_metrics (starter-adjusted), chemistry, validation { status, checks }, agent_guidance."
+      response_description:
+        "resolved_ingredients, flour_ratios, dough_metrics (bakers_hydration_total_liquid_pct for enriched doughs), chemistry, validation { status, checks }, agent_guidance."
     },
     {
       path: "/baking/pan-scale",
@@ -171,8 +175,8 @@ export const agentManifest = {
     avg_response_time_ms: 120
   },
   agent_notes:
-    "BakeBase is a safeguard for baking agents — NOT a recipe site. WORKFLOW: 1) Discover via AgentManifest registry. 2) POST /api/keys. 3) Parse a web recipe into ingredients (grams preferred, or quantity+unit). 4) POST /baking/validate-mix with intent bread and optional process { yeast_type, cold_retard_hours, target_dough_temp_c, preferment_bakers_pct, style: baguette }. 5) GET /baking/convert for cup/tsp→grams when needed. 6) GET /ingredients/* for substitutions. BakeBase flags bad ratios, cup packing, starter hydration, and fermentation mismatches — it does not author steps or guarantee success.",
+    "Account: not required. Pricing: free (10k requests/day). Authentication: API key from POST /dashboard/keys or /api/keys (Bearer or X-API-Key). BakeBase is a safeguard for baking agents — NOT a recipe site. WORKFLOW: discover via AgentManifest registry; parse web recipes to catalog ingredient names with grams or quantity+unit; POST /baking/validate-mix with intent bread|cake|cookie|custard|auto and optional process { style: enriched_bread|pizza|muffin_quick_bread, yeast_type, cold_retard_hours, target_dough_temp_c }; use dough_metrics.bakers_hydration_total_liquid_pct for brioche/enriched doughs; GET /baking/convert for cups/tsp; GET /ingredients/* and POST /ingredients/combine for substitutions and ID-based chemistry. Flags bad ratios, cup packing, fermentation mismatches, unresolved names — does not author steps.",
   contact: "mailto:brandon@agent-manifest.com",
   listing_requested: true,
-  last_updated: "2026-10-03T00:00:00.000Z"
+  last_updated: "2026-10-03T02:00:00.000Z"
 };
