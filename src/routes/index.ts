@@ -15,7 +15,7 @@ router.get('/', (_req, res) => {
   res.json({
     service: 'BakeBase',
     description: 'AI-first food science reference API for baking ingredients',
-    version: '1.5.0',
+    version: '1.6.0',
     status: 'healthy',
     agent_first_step:
       'Fetch /.well-known/agent-manifest.json before querying. It contains auth and usage.',

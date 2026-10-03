@@ -16,7 +16,12 @@ import {
   computeFlourRelativeRatios,
   runIntentRatioChecks
 } from './intent-ratio-heuristics.service';
-import { flourCupPackingChecks, VolumeConversionRecord } from './volume-packing.service';
+import {
+  flourCupPackingChecks,
+  SaltConversionRecord,
+  saltVolumeChecks,
+  VolumeConversionRecord
+} from './volume-packing.service';
 import { CombinedAnalysis, IngredientInput } from '../types';
 
 export type BakeIntent = 'auto' | 'bread' | 'custard' | 'cake' | 'cookie';
@@ -50,6 +55,8 @@ export interface DoughMetrics {
   starter_water_equivalent_g: number;
   total_flour_for_bakers_pct_g: number;
   total_water_for_bakers_pct_g: number;
+  total_liquid_water_g: number;
+  bakers_hydration_total_liquid_pct: number | null;
   preferment_bakers_pct: number | null;
 }
 
@@ -78,6 +85,8 @@ function toDoughMetrics(adj: StarterAdjustedMetrics): DoughMetrics {
     starter_water_equivalent_g: adj.starter_water_equivalent_g,
     total_flour_for_bakers_pct_g: adj.total_flour_for_bakers_pct_g,
     total_water_for_bakers_pct_g: adj.total_water_for_bakers_pct_g,
+    total_liquid_water_g: adj.total_liquid_water_g,
+    bakers_hydration_total_liquid_pct: adj.bakers_hydration_total_liquid_pct,
     preferment_bakers_pct: adj.preferment_bakers_pct
   };
 }
@@ -86,11 +95,10 @@ function runPrefermentChecks(metrics: DoughMetrics, expectedPrefermentPct?: numb
   const checks: ValidationCheck[] = [];
 
   if (metrics.sourdough_starter_g > 0) {
-    const explicit = metrics.bakers_hydration_explicit_only_pct;
     checks.push({
       id: 'starter_hydration_model',
       severity: 'info',
-      message: `Starter ${metrics.sourdough_starter_g} g modeled as 50/50 flour/water at 100% hydration. Total hydration ${metrics.bakers_hydration_pct}% (explicit-only ${explicit ?? 'n/a'}%).`
+      message: `Starter ${metrics.sourdough_starter_g} g modeled as 50/50 flour/water at 100% hydration. Water-line hydration ${metrics.bakers_hydration_pct}%; total liquid ${metrics.bakers_hydration_total_liquid_pct ?? 'n/a'}%.`
     });
   }
 
@@ -121,7 +129,9 @@ function inferIntent(metrics: DoughMetrics, chemistry: CombinedAnalysis): BakeIn
   if (chemistry.recipe_classification.type === 'cheesecake_filling') return 'custard';
   if (chemistry.recipe_classification.type === 'bread_dough') return 'bread';
   if (metrics.flour_weight_g === 0) return 'custard';
-  if (metrics.flour_weight_g > 0 && (metrics.bakers_hydration_pct ?? 0) >= 60) return 'bread';
+  const h =
+    metrics.bakers_hydration_total_liquid_pct ?? metrics.bakers_hydration_pct ?? 0;
+  if (metrics.flour_weight_g > 0 && h >= 60) return 'bread';
   return 'cake';
 }
 
@@ -171,12 +181,14 @@ async function linesToGrams(
   conversions: Array<{ ingredient_name: string; note: string }>;
   volumeRecords: VolumeConversionRecord[];
   packingChecks: ValidationCheck[];
+  saltVolumeRecords: SaltConversionRecord[];
   errors: string[];
 }> {
   const gramsLines: NamedQuantity[] = [];
   const conversions: Array<{ ingredient_name: string; note: string }> = [];
   const volumeRecords: VolumeConversionRecord[] = [];
   const packingChecks: ValidationCheck[] = [];
+  const saltVolumeRecords: SaltConversionRecord[] = [];
   const errors: string[] = [];
 
   for (const line of lines) {
@@ -203,6 +215,15 @@ async function linesToGrams(
           catalog_name: exact.name
         });
         packingChecks.push(...flourCupPackingChecks(exact, line.quantity, line.unit, conv.quantity_g));
+        if (exact.category === 'salt') {
+          saltVolumeRecords.push({
+            ingredient_name: line.ingredient_name,
+            amount: line.quantity,
+            unit: line.unit,
+            quantity_g: conv.quantity_g,
+            method: conv.method
+          });
+        }
       } catch (e) {
         errors.push(e instanceof Error ? e.message : String(e));
       }
@@ -212,13 +233,19 @@ async function linesToGrams(
     errors.push(`Each ingredient needs quantity_g or quantity+unit: ${line.ingredient_name}`);
   }
 
-  return { gramsLines, conversions, volumeRecords, packingChecks, errors };
+  return { gramsLines, conversions, volumeRecords, packingChecks, saltVolumeRecords, errors };
 }
 
 export class MixValidationService {
   static async validate(input: MixValidationInput) {
-    const { gramsLines, conversions, volumeRecords, packingChecks, errors: convertErrors } =
-      await linesToGrams(input.ingredients);
+    const {
+      gramsLines,
+      conversions,
+      volumeRecords,
+      packingChecks,
+      saltVolumeRecords,
+      errors: convertErrors
+    } = await linesToGrams(input.ingredients);
     if (convertErrors.length > 0) {
       return {
         success: false as const,
@@ -262,13 +289,18 @@ export class MixValidationService {
         : [];
 
     const prefermentChecks = runPrefermentChecks(metrics, input.process?.preferment_bakers_pct);
+    const saltChecks = saltVolumeChecks(
+      saltVolumeRecords,
+      metrics.salt_pct_of_flour,
+      metrics.total_flour_for_bakers_pct_g
+    );
     const flourRatios = computeFlourRelativeRatios(merged, catalog);
     const checks = runChecks(
       intent,
       metrics,
       chemistry,
       fermentationChecks,
-      [...packingChecks, ...prefermentChecks],
+      [...packingChecks, ...prefermentChecks, ...saltChecks],
       flourRatios,
       input.process?.style ?? 'unknown'
     );
@@ -301,7 +333,7 @@ export class MixValidationService {
       agent_guidance: [
         'BakeBase does not author recipes — it validates ingredient lists against the catalog and baking science.',
         'Resolve names to catalog entries; fuzzy matches are flagged via match=search.',
-        'Use dough_metrics.bakers_hydration_pct for lean bread (starter-adjusted); bakers_hydration_explicit_only_pct ignores starter.',
+        'Lean bread: dough_metrics.bakers_hydration_pct (free water). Enriched/brioche: use bakers_hydration_total_liquid_pct (milk/egg water included).',
         'Set intent (bread, cake, cookie, custard) or auto; process.style (pizza, enriched_bread, muffin_quick_bread, rolls, …) sharpens checks.',
         'Pass process.cold_retard_hours, yeast_type, target_dough_temp_c when parsing fermentation-heavy recipes.',
         'Use quantity+unit on ingredients for cup/tsp conversion (density from catalog; packing varies).',

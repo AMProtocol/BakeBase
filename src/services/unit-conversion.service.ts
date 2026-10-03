@@ -29,10 +29,21 @@ const ML_PER_UNIT: Record<string, number> = {
   pounds: 453.592
 };
 
+/** Culinary fine table salt — density×tsp over-estimates vs weighing. */
+export const SALT_GRAMS_PER_TSP = 6;
+export const SALT_GRAMS_PER_TBSP = 18;
+
 export interface ConversionResult {
   quantity_g: number;
-  method: 'direct_weight' | 'density_volume' | 'assumed_weight_oz';
+  method: 'direct_weight' | 'density_volume' | 'salt_volume_heuristic' | 'assumed_weight_oz';
   note: string;
+}
+
+function isSaltIngredient(ingredient: Ingredient): boolean {
+  if (ingredient.category === 'salt') return true;
+  const n = ingredient.name.toLowerCase();
+  if (n.includes('unsalted')) return false;
+  return /\bsalt\b/.test(n) || n.endsWith(' salt');
 }
 
 export function normalizeUnit(unit: string): string {
@@ -68,6 +79,25 @@ export function convertToGrams(
   const mlPer = ML_PER_UNIT[u];
   if (mlPer === undefined) {
     throw new Error(`Unsupported unit: ${unit}`);
+  }
+
+  if (isSaltIngredient(ingredient)) {
+    if (u === 'tsp' || u === 'teaspoon' || u === 'teaspoons') {
+      const quantity_g = Math.round(amount * SALT_GRAMS_PER_TSP * 100) / 100;
+      return {
+        quantity_g,
+        method: 'salt_volume_heuristic',
+        note: `Fine salt ~${SALT_GRAMS_PER_TSP} g/tsp (tablespoon measure); prefer grams from a scale when available.`
+      };
+    }
+    if (u === 'tbsp' || u === 'tablespoon' || u === 'tablespoons') {
+      const quantity_g = Math.round(amount * SALT_GRAMS_PER_TBSP * 100) / 100;
+      return {
+        quantity_g,
+        method: 'salt_volume_heuristic',
+        note: `Fine salt ~${SALT_GRAMS_PER_TBSP} g/tbsp; prefer grams when available.`
+      };
+    }
   }
 
   const density = ingredient.density_g_per_ml;

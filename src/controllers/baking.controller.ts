@@ -172,7 +172,9 @@ export class BakingController {
           'Safeguard for agents: validate a web or user-provided ingredient list (grams) against BakeBase catalog and baking ratios. Not a recipe library.',
         field_glossary: {
           bakers_hydration_pct:
-            'Total water ÷ total flour × 100 (includes 100% hydration sourdough starter split)',
+            'Free water ingredient ÷ total flour × 100 (includes starter water split)',
+          bakers_hydration_total_liquid_pct:
+            'Sum of catalog water from all ingredients ÷ total flour — use for brioche/enriched doughs',
           bakers_hydration_explicit_only_pct: 'Explicit water ÷ explicit flour only (ignores starter)',
           'validation.status': 'ok | warn | fail from ratio/chemistry checks',
           intent_used: 'bread/custard/etc. from request or inferred from mix'

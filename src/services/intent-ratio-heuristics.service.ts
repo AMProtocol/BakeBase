@@ -58,6 +58,31 @@ export function computeFlourRelativeRatios(
   };
 }
 
+/** Prefer total liquid (milk/egg water) for enriched/sourdough; lean doughs with milk use it when it diverges from water-only %. */
+function breadHydrationPercent(
+  metrics: DoughMetrics,
+  profile: 'lean' | 'enriched' | 'sourdough' | 'pizza'
+): number | null {
+  const total = metrics.bakers_hydration_total_liquid_pct;
+  const waterOnly = metrics.bakers_hydration_pct;
+  if (profile === 'enriched' || profile === 'sourdough') {
+    return total ?? waterOnly;
+  }
+  if (total !== null && waterOnly !== null && total - waterOnly > 8) {
+    return total;
+  }
+  return waterOnly ?? total;
+}
+
+function hydrationLabel(metrics: DoughMetrics, h: number): string {
+  const waterOnly = metrics.bakers_hydration_pct;
+  const total = metrics.bakers_hydration_total_liquid_pct;
+  if (total !== null && waterOnly !== null && Math.abs(total - waterOnly) > 8) {
+    return `Total liquid hydration ${h}% (free water only ${waterOnly}%)`;
+  }
+  return `Hydration ${h}%`;
+}
+
 function breadProfile(
   metrics: DoughMetrics,
   ratios: FlourRelativeRatios,
@@ -78,7 +103,8 @@ function runBreadChecks(
 ): ValidationCheck[] {
   const checks: ValidationCheck[] = [];
   const profile = breadProfile(metrics, ratios, style);
-  const h = metrics.bakers_hydration_pct;
+  const h = breadHydrationPercent(metrics, profile);
+  const hLabel = h !== null ? hydrationLabel(metrics, h) : '';
 
   if (h !== null) {
     if (profile === 'pizza') {
@@ -86,13 +112,13 @@ function runBreadChecks(
         checks.push({
           id: 'hydration_pizza_band',
           severity: 'warn',
-          message: `Hydration ${h}% is outside a typical pizza dough window (~58–65%); adjust water or flour if targeting Neapolitan vs pan styles.`
+          message: `${hLabel} is outside a typical pizza dough window (~58–65%); adjust water or flour if targeting Neapolitan vs pan styles.`
         });
       } else {
         checks.push({
           id: 'hydration_pizza_ok',
           severity: 'info',
-          message: `Hydration ${h}% fits common pizza dough ranges.`
+          message: `${hLabel} fits common pizza dough ranges.`
         });
       }
     } else if (profile === 'enriched') {
@@ -100,39 +126,39 @@ function runBreadChecks(
         checks.push({
           id: 'hydration_enriched_low',
           severity: 'warn',
-          message: `Hydration ${h}% is low for enriched dough (brioche, challah, soft rolls often ~50–65% with extra fat/sugar).`
+          message: `${hLabel} is low for enriched dough (brioche, challah, soft rolls often ~55–85% total liquid vs flour).`
         });
-      } else if (h > 72) {
+      } else if (h > 95) {
         checks.push({
           id: 'hydration_enriched_high',
           severity: 'info',
-          message: `Hydration ${h}% is high for a fat-rich dough — expect slack dough unless flour is very strong.`
+          message: `${hLabel} is very high for a fat-rich dough — expect slack dough unless flour is very strong.`
         });
       } else {
         checks.push({
           id: 'hydration_enriched_ok',
           severity: 'info',
-          message: `Hydration ${h}% is plausible for enriched bread (fat ~${ratios.fat_pct_of_flour ?? '?'}% of flour).`
+          message: `${hLabel} is plausible for enriched bread (fat ~${ratios.fat_pct_of_flour ?? '?'}% of flour).`
         });
       }
     } else if (profile === 'sourdough') {
-      if (h !== null && h < 65) {
+      if (h < 65) {
         checks.push({
           id: 'hydration_sourdough_low',
           severity: 'info',
-          message: `Hydration ${h}% is on the stiff side for many sourdough loaves (often ~70–80% total).`
+          message: `${hLabel} is on the stiff side for many sourdough loaves (often ~70–80% total).`
         });
-      } else if (h !== null && h > 88) {
+      } else if (h > 88) {
         checks.push({
           id: 'hydration_sourdough_high',
           severity: 'info',
-          message: `Hydration ${h}% is very wet — common for some country loaves; handling skill matters.`
+          message: `${hLabel} is very wet — common for some country loaves; handling skill matters.`
         });
-      } else if (h !== null) {
+      } else {
         checks.push({
           id: 'hydration_sourdough_ok',
           severity: 'info',
-          message: `Hydration ${h}% (starter-adjusted) is in a typical sourdough ballpark.`
+          message: `${hLabel} is in a typical sourdough ballpark.`
         });
       }
     } else {
@@ -140,19 +166,19 @@ function runBreadChecks(
         checks.push({
           id: 'hydration_low',
           severity: 'warn',
-          message: `Baker's hydration ${h}% is low for lean yeasted bread (many loaves ~62–78%). Crumb can feel dry if bake is long.`
+          message: `${hLabel} is low for lean yeasted bread (many loaves ~62–78%). Crumb can feel dry if bake is long.`
         });
       } else if (h > 85) {
         checks.push({
           id: 'hydration_high',
           severity: 'info',
-          message: `Hydration ${h}% is very high — expect sticky dough (ciabatta/high-hydration territory).`
+          message: `${hLabel} is very high — expect sticky dough (ciabatta/high-hydration territory).`
         });
       } else {
         checks.push({
           id: 'hydration_ok',
           severity: 'info',
-          message: `Baker's hydration ${h}% is in a normal range for lean yeasted bread.`
+          message: `${hLabel} is in a normal range for lean yeasted bread.`
         });
       }
     }
@@ -160,7 +186,7 @@ function runBreadChecks(
     checks.push({
       id: 'hydration_unknown',
       severity: 'warn',
-      message: 'Flour present but no Water ingredient — cannot compute baker’s hydration.'
+      message: 'Flour present but no measurable water in mix — cannot compute hydration.'
     });
   }
 
@@ -407,7 +433,8 @@ export function runIntentRatioChecks(
           ? 'cake'
           : classification === 'cookie_dough'
             ? 'cookie'
-            : classification === 'bread_dough' || (metrics.bakers_hydration_pct ?? 0) >= 58
+            : classification === 'bread_dough' ||
+                (metrics.bakers_hydration_total_liquid_pct ?? metrics.bakers_hydration_pct ?? 0) >= 58
               ? 'bread'
               : 'cake'
       : intent;

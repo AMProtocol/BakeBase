@@ -11,7 +11,11 @@ export interface StarterAdjustedMetrics {
   starter_water_equivalent_g: number;
   total_flour_for_bakers_pct_g: number;
   total_water_for_bakers_pct_g: number;
+  /** Free water + water from milk, eggs, etc. (catalog water_content_pct), aligned with /combine hydration. */
+  total_liquid_water_g: number;
   bakers_hydration_pct: number | null;
+  /** total_liquid_water_g ÷ total flour (starter-adjusted). Use for enriched doughs. */
+  bakers_hydration_total_liquid_pct: number | null;
   /** Starter flour ÷ total flour (baker's preferment %). */
   preferment_bakers_pct: number | null;
   salt_pct_of_flour: number | null;
@@ -53,12 +57,16 @@ export function computeStarterAdjustedMetrics(
   let salt = 0;
   let yeast = 0;
   let starter = 0;
+  let totalLiquidWater = 0;
   let total = 0;
 
   for (const line of merged) {
     const ing = byId.get(line.ingredient_id);
     if (!ing) continue;
     total += line.quantity_g;
+
+    const waterPct = (ing.water_content_pct ?? 0) / 100;
+    totalLiquidWater += line.quantity_g * waterPct;
 
     if (isSourdoughStarter(ing)) {
       starter += line.quantity_g;
@@ -83,8 +91,11 @@ export function computeStarterAdjustedMetrics(
     starter_water_equivalent_g: Math.round(starterWaterEq * 10) / 10,
     total_flour_for_bakers_pct_g: Math.round(totalFlour * 10) / 10,
     total_water_for_bakers_pct_g: Math.round(totalWater * 10) / 10,
+    total_liquid_water_g: Math.round(totalLiquidWater * 10) / 10,
     bakers_hydration_pct:
       totalFlour > 0 ? Math.round((totalWater / totalFlour) * 1000) / 10 : null,
+    bakers_hydration_total_liquid_pct:
+      totalFlour > 0 ? Math.round((totalLiquidWater / totalFlour) * 1000) / 10 : null,
     preferment_bakers_pct:
       totalFlour > 0 && starter > 0
         ? Math.round((starterFlourEq / totalFlour) * 10000) / 100
