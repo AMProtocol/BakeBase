@@ -17,10 +17,8 @@ async function main() {
   }
 
   console.log(
-    `🌱 Seeding BakeBase catalog (found ${existing} rows; water=${Boolean(hasWater)} salt=${Boolean(hasSalt)})...`
+    `🌱 Syncing BakeBase catalog (found ${existing} rows; water=${Boolean(hasWater)} salt=${Boolean(hasSalt)} graham=${Boolean(hasGraham)})...`
   );
-
-  await prisma.ingredient.deleteMany();
 
   // FLOURS
   const flours = [
@@ -1961,43 +1959,8 @@ async function main() {
     }
   ];
 
-  // NUTS - 2 ingredients
+  // NUTS (Almond Flour is listed under flours)
   const nuts = [
-    {
-      name: 'Almond Flour',
-      category: 'nut',
-      description: 'Finely ground blanched almonds, gluten-free flour alternative high in fat and protein.',
-      water_content_pct: 4.7,
-      protein_content_pct: 21.4,
-      fat_content_pct: 55.0,
-      starch_content_pct: 0.0,
-      sugar_content_pct: 4.4,
-      fiber_content_pct: 10.0,
-      ph_level_min: 6.0,
-      ph_level_max: 6.5,
-      density_g_per_ml: 0.48,
-      standard_measurement_unit: 'weight',
-      gluten_forming: false,
-      emulsifying: false,
-      leavening_type: null,
-      hygroscopic: true,
-      typical_hydration_ratio: null,
-      flavor_profile: ['nutty', 'sweet', 'mild', 'rich'],
-      primary_function: 'Gluten-free flour substitute, adds moisture and richness from high fat content, creates tender, dense texture.',
-      interactions: [
-        { ingredient: 'eggs', effect: 'Eggs provide structure (no gluten)', notes: 'Macarons use almond flour + egg whites only' },
-        { ingredient: 'sugar', effect: 'Sweetness complements nuttiness', notes: 'Financiers, frangipane' },
-        { ingredient: 'butter', effect: 'Fat-on-fat creates ultra-tender texture', notes: 'Almond cakes very rich' },
-        { ingredient: 'leavening', effect: 'Needs more leavening than wheat flour', notes: 'No gluten = less structure to trap CO2' }
-      ],
-      substitution_ratio: [
-        { substitute: 'all-purpose flour', ratio: '1:1 by weight (not volume)', notes: 'Add extra egg for structure' },
-        { substitute: 'hazelnut flour', ratio: '1:1', notes: 'Similar fat/protein, different flavor' }
-      ],
-      temperature_sensitivity: 'High fat content means faster browning - watch oven temp. Typical use: 1-2 cups per batch. Absorbs less liquid than wheat flour due to no gluten. Store refrigerated to prevent rancidity from oils. Blanched (skinless) produces finer texture than almond meal (with skins).',
-      source_notes: 'USDA FoodData Central (FDC ID: 170567), gluten-free baking consensus',
-      confidence_level: 'verified'
-    },
     {
       name: 'Chopped Walnuts',
       category: 'nut',
@@ -2110,82 +2073,6 @@ async function main() {
     }
   ];
 
-  // SYRUPS - 2 ingredients (moving honey and molasses from conceptual to actual)
-  const syrups = [
-    {
-      name: 'Honey',
-      category: 'syrup',
-      description: 'Natural sweetener from bees, contains fructose/glucose, hygroscopic (retains moisture), adds flavor and color.',
-      water_content_pct: 17.1,
-      protein_content_pct: 0.3,
-      fat_content_pct: 0.0,
-      starch_content_pct: 0.0,
-      sugar_content_pct: 82.1,
-      fiber_content_pct: 0.2,
-      ph_level_min: 3.4,
-      ph_level_max: 6.1,
-      density_g_per_ml: 1.42,
-      standard_measurement_unit: 'volume',
-      gluten_forming: false,
-      emulsifying: false,
-      leavening_type: null,
-      hygroscopic: true,
-      typical_hydration_ratio: null,
-      flavor_profile: ['sweet', 'floral', 'complex', 'variable by flower source'],
-      primary_function: 'Sweetens and adds moisture retention, contributes to browning, adds subtle floral notes, keeps baked goods soft.',
-      interactions: [
-        { ingredient: 'baking soda', effect: 'Acidic honey activates baking soda', notes: 'Contributes to leavening' },
-        { ingredient: 'flour', effect: 'Hygroscopic - pulls moisture from flour', notes: 'Keeps cakes moist for days' },
-        { ingredient: 'eggs', effect: 'Emulsifies well with eggs', notes: 'Smooth batters' },
-        { ingredient: 'heat', effect: 'Caramelizes and darkens rapidly', notes: 'Honey cakes brown faster than sugar cakes' }
-      ],
-      substitution_ratio: [
-        { substitute: 'sugar', ratio: '1:1.25', notes: 'Use 1 cup honey = 1.25 cups sugar, reduce liquid by 1/4 cup' },
-        { substitute: 'maple syrup', ratio: '1:1', notes: 'Similar moisture, different flavor' },
-        { substitute: 'agave nectar', ratio: '1:1', notes: 'Milder flavor, similar properties' }
-      ],
-      temperature_sensitivity: 'Caramelizes and darkens at lower temps than sugar. Reduce oven temp by 25°F when substituting for sugar. Antibacterial properties. Never feed to infants <1 year (botulism risk). Typical use: 1/4-1/2 cup per batch.',
-      source_notes: 'USDA FoodData Central (FDC ID: 169640), food science consensus',
-      confidence_level: 'verified'
-    },
-    {
-      name: 'Molasses',
-      category: 'syrup',
-      description: 'Dark, thick syrup from sugar refining, adds moisture, deep flavor, and promotes browning.',
-      water_content_pct: 21.9,
-      protein_content_pct: 0.0,
-      fat_content_pct: 0.1,
-      starch_content_pct: 0.0,
-      sugar_content_pct: 74.7,
-      fiber_content_pct: 0.0,
-      ph_level_min: 5.0,
-      ph_level_max: 6.0,
-      density_g_per_ml: 1.40,
-      standard_measurement_unit: 'volume',
-      gluten_forming: false,
-      emulsifying: false,
-      leavening_type: null,
-      hygroscopic: true,
-      typical_hydration_ratio: null,
-      flavor_profile: ['robust', 'slightly bitter', 'caramel', 'complex', 'earthy'],
-      primary_function: 'Adds dark color, complex flavor, moisture retention, and acidity for activating baking soda.',
-      interactions: [
-        { ingredient: 'baking soda', effect: 'Acidity activates baking soda', notes: 'Classic gingerbread leavening' },
-        { ingredient: 'ginger', effect: 'Complements warm spices', notes: 'Gingerbread, spice cookies' },
-        { ingredient: 'flour', effect: 'Hygroscopic - retains moisture', notes: 'Keeps cookies soft and chewy' },
-        { ingredient: 'heat', effect: 'Promotes rapid browning', notes: 'Dark crust on gingerbread' }
-      ],
-      substitution_ratio: [
-        { substitute: 'honey', ratio: '1:1', notes: 'Milder flavor, lighter color' },
-        { substitute: 'maple syrup', ratio: '1:1', notes: 'Less robust, different flavor' },
-        { substitute: 'dark corn syrup', ratio: '1:1', notes: 'Less flavor complexity' }
-      ],
-      temperature_sensitivity: 'High mineral content (iron, calcium) promotes rapid browning. Light molasses mild, dark molasses robust, blackstrap very bitter (avoid in baking). Typical use: 1/4-1/2 cup per batch in gingerbread, cookies.',
-      source_notes: 'USDA FoodData Central (FDC ID: 169676), food science consensus',
-      confidence_level: 'verified'
-    }
-  ];
-
   const crackers = [
     {
       name: 'Graham Cracker Crumbs',
@@ -2244,16 +2131,28 @@ async function main() {
     ...oils,
     ...nuts,
     ...thickeners,
-    ...syrups,
     ...crackers
   ];
 
-  // Insert ingredients
+  const catalogByName = new Map<string, (typeof allIngredients)[number]>();
   for (const ingredient of allIngredients) {
-    await prisma.ingredient.create({ data: ingredient });
+    if (catalogByName.has(ingredient.name)) {
+      console.warn(`⚠️ Duplicate catalog name skipped: ${ingredient.name}`);
+      continue;
+    }
+    catalogByName.set(ingredient.name, ingredient);
+  }
+  const catalog = [...catalogByName.values()];
+
+  for (const ingredient of catalog) {
+    await prisma.ingredient.upsert({
+      where: { name: ingredient.name },
+      create: ingredient,
+      update: ingredient
+    });
   }
 
-  console.log(`✅ Seeded ${allIngredients.length} ingredients`);
+  console.log(`✅ Synced ${catalog.length} ingredients`);
   console.log(`   - ${flours.length} flours`);
   console.log(`   - ${eggs.length} egg types`);
   console.log(`   - ${fats.length} fats`);
@@ -2270,7 +2169,6 @@ async function main() {
   console.log(`   - ${oils.length} oils`);
   console.log(`   - ${nuts.length} nuts`);
   console.log(`   - ${thickeners.length} thickeners`);
-  console.log(`   - ${syrups.length} syrups`);
   console.log(`   - ${crackers.length} cracker products`);
 }
 

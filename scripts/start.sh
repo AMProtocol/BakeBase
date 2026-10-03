@@ -3,6 +3,8 @@ set -e
 echo "Applying database schema..."
 npx prisma db push
 echo "Ensuring ingredient catalog..."
-npm run db:seed
+if ! npm run db:seed; then
+  echo "WARN: db:seed failed — starting API anyway if catalog partially present"
+fi
 echo "Starting BakeBase API..."
 exec npm start
