@@ -9,7 +9,7 @@ export class DocsController {
   static getAgentGuide(_req: Request, res: Response): void {
     const guide: AgentGuide = {
       api_name: 'BakeBase',
-      version: '1.3.0',
+      version: '1.5.0',
       purpose:
         'Agent reference for baking: ingredient catalog, chemistry, and validation of external recipes. Not a recipe library.',
       recommended_usage:

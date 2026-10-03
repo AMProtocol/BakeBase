@@ -19,7 +19,26 @@ const processSchema = z.object({
   yeast_type: z.enum(['instant', 'active_dry', 'fresh', 'unknown']).optional(),
   cold_retard_hours: z.number().nonnegative().optional(),
   room_temp_bulk_hours: z.number().nonnegative().optional(),
-  style: z.enum(['baguette', 'sandwich_loaf', 'quick', 'unknown']).optional()
+  style: z
+    .enum([
+      'lean_bread',
+      'enriched_bread',
+      'sourdough',
+      'pizza',
+      'baguette',
+      'sandwich_loaf',
+      'rolls',
+      'quick_yeast',
+      'muffin_quick_bread',
+      'cake',
+      'cookie',
+      'pastry',
+      'unknown'
+    ])
+    .optional(),
+  target_dough_temp_c: z.number().min(10).max(40).optional(),
+  ambient_temp_c: z.number().min(-5).max(45).optional(),
+  preferment_bakers_pct: z.number().min(0).max(100).optional()
 });
 
 const validateMixSchema = z.object({
@@ -152,7 +171,9 @@ export class BakingController {
         endpoint_description:
           'Safeguard for agents: validate a web or user-provided ingredient list (grams) against BakeBase catalog and baking ratios. Not a recipe library.',
         field_glossary: {
-          bakers_hydration_pct: 'Water ingredient grams ÷ flour grams × 100',
+          bakers_hydration_pct:
+            'Total water ÷ total flour × 100 (includes 100% hydration sourdough starter split)',
+          bakers_hydration_explicit_only_pct: 'Explicit water ÷ explicit flour only (ignores starter)',
           'validation.status': 'ok | warn | fail from ratio/chemistry checks',
           intent_used: 'bread/custard/etc. from request or inferred from mix'
         }

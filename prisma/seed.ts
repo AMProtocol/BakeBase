@@ -11,8 +11,9 @@ async function main() {
   const hasSalt = await prisma.ingredient.findFirst({ where: { name: 'Table Salt' } });
   const hasGraham = await prisma.ingredient.findFirst({ where: { name: 'Graham Cracker Crumbs' } });
   const hasMalt = await prisma.ingredient.findFirst({ where: { name: 'Diastatic Malt Powder' } });
+  const hasFreshYeast = await prisma.ingredient.findFirst({ where: { name: 'Fresh Yeast' } });
 
-  if (existing >= MIN_CATALOG_ROWS && hasWater && hasSalt && hasGraham && hasMalt) {
+  if (existing >= MIN_CATALOG_ROWS && hasWater && hasSalt && hasGraham && hasMalt && hasFreshYeast) {
     console.log(`✅ Ingredient catalog OK (${existing} rows), skip seed`);
     return;
   }
@@ -1289,6 +1290,42 @@ async function main() {
       ],
       temperature_sensitivity: 'Same thermal properties as active dry (optimal 80-95°F/27-35°C, dies at 140°F/60°C) but does not require warm water activation. More resilient to temperature fluctuations. Faster fermentation than active dry.',
       source_notes: 'USDA FoodData Central, King Arthur Baking, food science consensus',
+      confidence_level: 'verified'
+    },
+    {
+      name: 'Fresh Yeast',
+      category: 'leavener',
+      description:
+        'Compressed cake yeast with high moisture; common in bakeries. Weigh for precision — not interchangeable gram-for-gram with dry yeast.',
+      water_content_pct: 70.0,
+      protein_content_pct: 12.0,
+      fat_content_pct: 1.5,
+      starch_content_pct: 0.0,
+      sugar_content_pct: 2.0,
+      fiber_content_pct: 6.0,
+      ph_level_min: 5.0,
+      ph_level_max: 6.5,
+      density_g_per_ml: 1.05,
+      standard_measurement_unit: 'weight',
+      gluten_forming: false,
+      emulsifying: false,
+      leavening_type: 'biological',
+      hygroscopic: false,
+      typical_hydration_ratio: null,
+      flavor_profile: ['yeasty', 'mild', 'fermented'],
+      primary_function: 'Biological leavening via fermentation; faster activity than dry yeast at similar cell counts.',
+      interactions: [
+        { ingredient: 'salt', effect: 'Inhibits yeast', notes: 'Dissolve or crumble evenly into dough' },
+        { ingredient: 'sugar', effect: 'Feeds fermentation', notes: 'High sugar slows yeast' },
+        { ingredient: 'cold', effect: 'Short shelf life refrigerated', notes: 'Freeze for longer storage' }
+      ],
+      substitution_ratio: [
+        { substitute: 'instant yeast', ratio: '1:0.33', notes: 'About 1 g instant per 3 g fresh' },
+        { substitute: 'active dry yeast', ratio: '1:0.4', notes: 'Roughly 40% of fresh weight; proof active dry' }
+      ],
+      temperature_sensitivity:
+        'Active 75–85°F (24–29°C). Dies above ~140°F (60°C). Refrigerate; use within ~2 weeks typical.',
+      source_notes: 'King Arthur Baking, bakery industry references',
       confidence_level: 'verified'
     },
     {

@@ -1,8 +1,22 @@
 import { Ingredient } from '@prisma/client';
 import { ChemistryService } from './chemistry.service';
-import { FermentationProcessHints, runFermentationHeuristics } from './fermentation-heuristics.service';
-import { IngredientResolverService, NamedQuantity, ResolvedQuantity } from './ingredient-resolver.service';
+import {
+  BakeProcessStyle,
+  FermentationProcessHints,
+  runFermentationHeuristics
+} from './fermentation-heuristics.service';
+import { IngredientResolverService, NamedQuantity } from './ingredient-resolver.service';
+import {
+  computeStarterAdjustedMetrics,
+  explicitOnlyHydration,
+  StarterAdjustedMetrics
+} from './dough-metrics.service';
 import { convertToGrams } from './unit-conversion.service';
+import {
+  computeFlourRelativeRatios,
+  runIntentRatioChecks
+} from './intent-ratio-heuristics.service';
+import { flourCupPackingChecks, VolumeConversionRecord } from './volume-packing.service';
 import { CombinedAnalysis, IngredientInput } from '../types';
 
 export type BakeIntent = 'auto' | 'bread' | 'custard' | 'cake' | 'cookie';
@@ -26,9 +40,17 @@ export interface DoughMetrics {
   flour_weight_g: number;
   water_weight_g: number;
   bakers_hydration_pct: number | null;
+  /** Water ÷ flour counting only explicit flour/water lines (ignores starter split). */
+  bakers_hydration_explicit_only_pct: number | null;
   salt_pct_of_flour: number | null;
   yeast_pct_of_flour: number | null;
   total_weight_g: number;
+  sourdough_starter_g: number;
+  starter_flour_equivalent_g: number;
+  starter_water_equivalent_g: number;
+  total_flour_for_bakers_pct_g: number;
+  total_water_for_bakers_pct_g: number;
+  preferment_bakers_pct: number | null;
 }
 
 export interface ValidationCheck {
@@ -37,49 +59,62 @@ export interface ValidationCheck {
   message: string;
 }
 
-function isFlour(ing: Ingredient): boolean {
-  return ing.category === 'flour' || ing.gluten_forming;
-}
-
-function isWater(ing: Ingredient): boolean {
-  return ing.name.toLowerCase() === 'water';
-}
-
-function isSalt(ing: Ingredient): boolean {
-  return ing.category === 'salt' || ing.name.toLowerCase().includes('salt');
-}
-
 function isYeast(ing: Ingredient): boolean {
   const n = ing.name.toLowerCase();
   return ing.leavening_type === 'biological' || n.includes('yeast');
 }
 
-function computeMetrics(merged: ResolvedQuantity[], catalog: Ingredient[]): DoughMetrics {
-  const byId = new Map(catalog.map((c) => [c.id, c]));
-  let flour = 0;
-  let water = 0;
-  let salt = 0;
-  let yeast = 0;
-  let total = 0;
+function toDoughMetrics(adj: StarterAdjustedMetrics): DoughMetrics {
+  return {
+    flour_weight_g: adj.explicit_flour_g,
+    water_weight_g: adj.explicit_water_g,
+    bakers_hydration_pct: adj.bakers_hydration_pct,
+    bakers_hydration_explicit_only_pct: explicitOnlyHydration(adj),
+    salt_pct_of_flour: adj.salt_pct_of_flour,
+    yeast_pct_of_flour: adj.yeast_pct_of_flour,
+    total_weight_g: adj.total_weight_g,
+    sourdough_starter_g: adj.sourdough_starter_g,
+    starter_flour_equivalent_g: adj.starter_flour_equivalent_g,
+    starter_water_equivalent_g: adj.starter_water_equivalent_g,
+    total_flour_for_bakers_pct_g: adj.total_flour_for_bakers_pct_g,
+    total_water_for_bakers_pct_g: adj.total_water_for_bakers_pct_g,
+    preferment_bakers_pct: adj.preferment_bakers_pct
+  };
+}
 
-  for (const line of merged) {
-    const ing = byId.get(line.ingredient_id);
-    if (!ing) continue;
-    total += line.quantity_g;
-    if (isFlour(ing)) flour += line.quantity_g;
-    if (isWater(ing)) water += line.quantity_g;
-    if (isSalt(ing)) salt += line.quantity_g;
-    if (isYeast(ing)) yeast += line.quantity_g;
+function runPrefermentChecks(metrics: DoughMetrics, expectedPrefermentPct?: number): ValidationCheck[] {
+  const checks: ValidationCheck[] = [];
+
+  if (metrics.sourdough_starter_g > 0) {
+    const explicit = metrics.bakers_hydration_explicit_only_pct;
+    checks.push({
+      id: 'starter_hydration_model',
+      severity: 'info',
+      message: `Starter ${metrics.sourdough_starter_g} g modeled as 50/50 flour/water at 100% hydration. Total hydration ${metrics.bakers_hydration_pct}% (explicit-only ${explicit ?? 'n/a'}%).`
+    });
   }
 
-  return {
-    flour_weight_g: flour,
-    water_weight_g: water,
-    bakers_hydration_pct: flour > 0 ? Math.round((water / flour) * 1000) / 10 : null,
-    salt_pct_of_flour: flour > 0 ? Math.round((salt / flour) * 10000) / 100 : null,
-    yeast_pct_of_flour: flour > 0 ? Math.round((yeast / flour) * 10000) / 100 : null,
-    total_weight_g: total
-  };
+  if (expectedPrefermentPct === undefined) return checks;
+
+  if (metrics.preferment_bakers_pct === null) {
+    checks.push({
+      id: 'preferment_hint_no_starter',
+      severity: 'info',
+      message: `Process hints expect ~${expectedPrefermentPct}% preferment flour but no sourdough starter line was found — poolish/biga flour may be missing from the parsed list.`
+    });
+    return checks;
+  }
+
+  const diff = Math.abs(metrics.preferment_bakers_pct - expectedPrefermentPct);
+  if (diff > 5) {
+    checks.push({
+      id: 'preferment_pct_mismatch',
+      severity: 'warn',
+      message: `Starter flour is ${metrics.preferment_bakers_pct}% of total flour vs process hint ${expectedPrefermentPct}% — check preferment/poolish ingredients or hydration model.`
+    });
+  }
+
+  return checks;
 }
 
 function inferIntent(metrics: DoughMetrics, chemistry: CombinedAnalysis): BakeIntent {
@@ -94,73 +129,14 @@ function runChecks(
   intent: BakeIntent,
   metrics: DoughMetrics,
   chemistry: CombinedAnalysis,
-  fermentationChecks: ValidationCheck[]
+  fermentationChecks: ValidationCheck[],
+  extraChecks: ValidationCheck[],
+  flourRatios: ReturnType<typeof computeFlourRelativeRatios>,
+  processStyle: BakeProcessStyle
 ): ValidationCheck[] {
   const checks: ValidationCheck[] = [];
 
-  if (metrics.flour_weight_g === 0) {
-    checks.push({
-      id: 'no_flour',
-      severity: 'info',
-      message: 'No flour in mix — custard/cheesecake-style set, not gluten structure.'
-    });
-  }
-
-  if (intent === 'bread' || intent === 'auto') {
-    if (metrics.bakers_hydration_pct !== null) {
-      if (metrics.bakers_hydration_pct < 58) {
-        checks.push({
-          id: 'hydration_low',
-          severity: 'warn',
-          message: `Baker's hydration ${metrics.bakers_hydration_pct}% is low for lean bread (typical artisan baguette ~68–78%). Crumb may taste dry if no extra water was lost in baking.`
-        });
-      } else if (metrics.bakers_hydration_pct > 85) {
-        checks.push({
-          id: 'hydration_high',
-          severity: 'info',
-          message: `Baker's hydration ${metrics.bakers_hydration_pct}% is very high — sticky dough is expected until fully developed.`
-        });
-      } else {
-        checks.push({
-          id: 'hydration_ok',
-          severity: 'info',
-          message: `Baker's hydration ${metrics.bakers_hydration_pct}% is in a normal range for yeasted bread.`
-        });
-      }
-    } else if (metrics.flour_weight_g > 0) {
-      checks.push({
-        id: 'hydration_unknown',
-        severity: 'warn',
-        message: 'Flour present but no Water ingredient — cannot compute baker’s hydration (water/flour).'
-      });
-    }
-
-    if (metrics.salt_pct_of_flour !== null) {
-      if (metrics.salt_pct_of_flour < 1.5 || metrics.salt_pct_of_flour > 2.5) {
-        checks.push({
-          id: 'salt_unusual',
-          severity: 'warn',
-          message: `Salt is ${metrics.salt_pct_of_flour}% of flour (typical bread ~1.8–2.2%).`
-        });
-      }
-    }
-
-    if (metrics.yeast_pct_of_flour !== null && metrics.yeast_pct_of_flour < 0.35) {
-      checks.push({
-        id: 'yeast_very_low',
-        severity: 'info',
-        message: `Yeast ${metrics.yeast_pct_of_flour}% of flour — very low; long cold ferment is normal (e.g. baguette recipes).`
-      });
-    }
-
-    if (!chemistry.leavening_analysis.biological_present && metrics.flour_weight_g > 100) {
-      checks.push({
-        id: 'no_yeast',
-        severity: 'warn',
-        message: 'No biological leavening detected in catalog match — bread may not rise as expected.'
-      });
-    }
-  }
+  checks.push(...runIntentRatioChecks(intent, metrics, chemistry, flourRatios, processStyle));
 
   if (chemistry.leavening_analysis.adequacy === 'excessive') {
     checks.push({
@@ -175,6 +151,7 @@ function runChecks(
   }
 
   checks.push(...fermentationChecks);
+  checks.push(...extraChecks);
 
   if (checks.length === 0) {
     checks.push({
@@ -189,9 +166,17 @@ function runChecks(
 
 async function linesToGrams(
   lines: IngredientLineInput[]
-): Promise<{ gramsLines: NamedQuantity[]; conversions: Array<{ ingredient_name: string; note: string }>; errors: string[] }> {
+): Promise<{
+  gramsLines: NamedQuantity[];
+  conversions: Array<{ ingredient_name: string; note: string }>;
+  volumeRecords: VolumeConversionRecord[];
+  packingChecks: ValidationCheck[];
+  errors: string[];
+}> {
   const gramsLines: NamedQuantity[] = [];
   const conversions: Array<{ ingredient_name: string; note: string }> = [];
+  const volumeRecords: VolumeConversionRecord[] = [];
+  const packingChecks: ValidationCheck[] = [];
   const errors: string[] = [];
 
   for (const line of lines) {
@@ -210,6 +195,14 @@ async function linesToGrams(
         const conv = convertToGrams(line.quantity, line.unit, exact);
         gramsLines.push({ ingredient_name: line.ingredient_name, quantity_g: conv.quantity_g });
         conversions.push({ ingredient_name: line.ingredient_name, note: conv.note });
+        volumeRecords.push({
+          ingredient_name: line.ingredient_name,
+          amount: line.quantity,
+          unit: line.unit,
+          quantity_g: conv.quantity_g,
+          catalog_name: exact.name
+        });
+        packingChecks.push(...flourCupPackingChecks(exact, line.quantity, line.unit, conv.quantity_g));
       } catch (e) {
         errors.push(e instanceof Error ? e.message : String(e));
       }
@@ -219,12 +212,13 @@ async function linesToGrams(
     errors.push(`Each ingredient needs quantity_g or quantity+unit: ${line.ingredient_name}`);
   }
 
-  return { gramsLines, conversions, errors };
+  return { gramsLines, conversions, volumeRecords, packingChecks, errors };
 }
 
 export class MixValidationService {
   static async validate(input: MixValidationInput) {
-    const { gramsLines, conversions, errors: convertErrors } = await linesToGrams(input.ingredients);
+    const { gramsLines, conversions, volumeRecords, packingChecks, errors: convertErrors } =
+      await linesToGrams(input.ingredients);
     if (convertErrors.length > 0) {
       return {
         success: false as const,
@@ -254,7 +248,7 @@ export class MixValidationService {
     }));
 
     const chemistry = ChemistryService.analyzeCombination(inputs, catalog);
-    const metrics = computeMetrics(merged, catalog);
+    const metrics = toDoughMetrics(computeStarterAdjustedMetrics(merged, catalog));
     const intent = input.intent === 'auto' || !input.intent ? inferIntent(metrics, chemistry) : input.intent;
 
     const yeastNames = merged
@@ -267,7 +261,17 @@ export class MixValidationService {
         ? runFermentationHeuristics(metrics, input.process, yeastNames)
         : [];
 
-    const checks = runChecks(intent, metrics, chemistry, fermentationChecks);
+    const prefermentChecks = runPrefermentChecks(metrics, input.process?.preferment_bakers_pct);
+    const flourRatios = computeFlourRelativeRatios(merged, catalog);
+    const checks = runChecks(
+      intent,
+      metrics,
+      chemistry,
+      fermentationChecks,
+      [...packingChecks, ...prefermentChecks],
+      flourRatios,
+      input.process?.style ?? 'unknown'
+    );
 
     const hasFail = checks.some((c) => c.severity === 'fail');
     const hasWarn = checks.some((c) => c.severity === 'warn');
@@ -285,8 +289,10 @@ export class MixValidationService {
         match: m.match
       })),
       unit_conversions: conversions.length > 0 ? conversions : null,
+      volume_conversions: volumeRecords.length > 0 ? volumeRecords : null,
       process_hints: input.process ?? null,
       dough_metrics: metrics,
+      flour_ratios: flourRatios,
       chemistry,
       validation: {
         status: hasFail ? 'fail' : hasWarn ? 'warn' : 'ok',
@@ -295,8 +301,9 @@ export class MixValidationService {
       agent_guidance: [
         'BakeBase does not author recipes — it validates ingredient lists against the catalog and baking science.',
         'Resolve names to catalog entries; fuzzy matches are flagged via match=search.',
-        'Use dough_metrics.bakers_hydration_pct for lean bread; combine for chemistry and classification.',
-        'Pass process.cold_retard_hours and process.yeast_type when parsing web recipes for fermentation heuristics.',
+        'Use dough_metrics.bakers_hydration_pct for lean bread (starter-adjusted); bakers_hydration_explicit_only_pct ignores starter.',
+        'Set intent (bread, cake, cookie, custard) or auto; process.style (pizza, enriched_bread, muffin_quick_bread, rolls, …) sharpens checks.',
+        'Pass process.cold_retard_hours, yeast_type, target_dough_temp_c when parsing fermentation-heavy recipes.',
         'Use quantity+unit on ingredients for cup/tsp conversion (density from catalog; packing varies).',
         'Oven technique and steam are still outside this API.'
       ]

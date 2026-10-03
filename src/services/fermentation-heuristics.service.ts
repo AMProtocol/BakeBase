@@ -2,11 +2,33 @@ import { DoughMetrics, ValidationCheck } from './mix-validation.service';
 
 export type YeastTypeHint = 'instant' | 'active_dry' | 'fresh' | 'unknown';
 
+/** Broad bake style for ratio + fermentation hints (not a recipe taxonomy). */
+export type BakeProcessStyle =
+  | 'lean_bread'
+  | 'enriched_bread'
+  | 'sourdough'
+  | 'pizza'
+  | 'baguette'
+  | 'sandwich_loaf'
+  | 'rolls'
+  | 'quick_yeast'
+  | 'muffin_quick_bread'
+  | 'cake'
+  | 'cookie'
+  | 'pastry'
+  | 'unknown';
+
 export interface FermentationProcessHints {
   yeast_type?: YeastTypeHint;
   cold_retard_hours?: number;
   room_temp_bulk_hours?: number;
-  style?: 'baguette' | 'sandwich_loaf' | 'quick' | 'unknown';
+  style?: BakeProcessStyle;
+  /** Desired dough temperature after mix (DDT), °C. */
+  target_dough_temp_c?: number;
+  /** Ambient / kitchen temperature during mix, °C. */
+  ambient_temp_c?: number;
+  /** Expected preferment flour as % of total flour (starter flour or poolish). */
+  preferment_bakers_pct?: number;
 }
 
 export function yeastTypeFromCatalog(name: string): YeastTypeHint {
@@ -27,7 +49,11 @@ export function runFermentationHeuristics(
 ): ValidationCheck[] {
   const checks: ValidationCheck[] = [];
   const yeastPct = metrics.yeast_pct_of_flour;
-  if (yeastPct === null || metrics.flour_weight_g < 50) {
+  const flourForChecks = metrics.total_flour_for_bakers_pct_g || metrics.flour_weight_g;
+  if (yeastPct === null && hints?.target_dough_temp_c === undefined) {
+    return checks;
+  }
+  if (flourForChecks < 50 && hints?.target_dough_temp_c === undefined) {
     return checks;
   }
 
@@ -39,14 +65,15 @@ export function runFermentationHeuristics(
   const catalogYeast = yeastCatalogNames.map((n) => n.toLowerCase());
   const hasInstant = catalogYeast.some((n) => n.includes('instant'));
   const hasActiveDry = catalogYeast.some((n) => n.includes('active dry'));
+  const hasFresh = catalogYeast.some((n) => n.includes('fresh'));
 
-  if (yeastPct >= 0.35 && yeastPct <= 1.2) {
+  if (yeastPct !== null && yeastPct >= 0.35 && yeastPct <= 1.2) {
     checks.push({
       id: 'yeast_artisan_range',
       severity: 'info',
       message: `Yeast ${yeastPct}% of flour fits slow artisan lean doughs (often paired with long cold retard).`
     });
-  } else if (yeastPct > 2) {
+  } else if (yeastPct !== null && yeastPct > 2) {
     checks.push({
       id: 'yeast_high',
       severity: 'warn',
@@ -54,12 +81,12 @@ export function runFermentationHeuristics(
     });
   }
 
-  if (coldH !== undefined) {
+  if (coldH !== undefined && yeastPct !== null) {
     if (yeastPct < 1 && coldH >= 12) {
       checks.push({
         id: 'cold_retard_matches_yeast',
         severity: 'info',
-        message: `Low yeast + ${coldH}h cold retard is consistent with overnight artisan fermentation (e.g. baguette-style).`
+        message: `Low yeast + ${coldH}h cold retard is consistent with overnight artisan fermentation.`
       });
     }
     if (yeastPct < 0.8 && coldH < 6) {
@@ -76,16 +103,20 @@ export function runFermentationHeuristics(
         message: `High yeast (${yeastPct}%) with ${coldH}h+ cold retard risks over-proofing and weak gluten.`
       });
     }
-  } else if (yeastPct < 0.8 && style === 'baguette') {
+  } else if (
+    yeastPct !== null &&
+    yeastPct < 0.8 &&
+    (style === 'baguette' || style === 'lean_bread' || style === 'sourdough')
+  ) {
     checks.push({
-      id: 'baguette_needs_time',
+      id: 'long_ferment_time_hint',
       severity: 'info',
       message:
-        'Low yeast baguette formulas usually need substantial bulk + cold retard (often 12–24h fridge) — pass cold_retard_hours in process hints when known.'
+        'Low yeast lean/sourdough formulas usually need long bulk and/or cold retard — pass cold_retard_hours when the source recipe specifies it.'
     });
   }
 
-  if (roomH !== undefined && roomH > 0 && roomH < 2 && yeastPct < 0.8) {
+  if (roomH !== undefined && roomH > 0 && roomH < 2 && yeastPct !== null && yeastPct < 0.8) {
     checks.push({
       id: 'short_bulk_low_yeast',
       severity: 'warn',
@@ -109,11 +140,82 @@ export function runFermentationHeuristics(
     });
   }
 
-  if (style === 'quick' && yeastPct < 0.5) {
+  if (yeastHint === 'fresh' && (hasInstant || hasActiveDry) && !hasFresh) {
     checks.push({
-      id: 'quick_style_low_yeast',
+      id: 'yeast_type_fresh_mismatch',
       severity: 'warn',
-      message: 'Quick-bread style hint conflicts with very low yeast — expect long waits unless recipe uses warm proofing.'
+      message:
+        'Process hints say fresh yeast but the list matched dry yeast — fresh is typically ~3× dry yeast by weight for similar activity.'
+    });
+  } else if (yeastHint === 'instant' && hasFresh && !hasInstant && !hasActiveDry) {
+    checks.push({
+      id: 'yeast_type_fresh_mismatch',
+      severity: 'warn',
+      message:
+        'Process hints say instant yeast but catalog match is fresh — if the source used instant grams, fresh amount may be ~3× too low.'
+    });
+  }
+
+  const ddt = hints?.target_dough_temp_c;
+  const ambient = hints?.ambient_temp_c;
+  if (ddt !== undefined) {
+    if (ddt < 22) {
+      checks.push({
+        id: 'ddt_cold',
+        severity: 'info',
+        message: `Target dough temp ${ddt}°C is cool — fermentation will be slow unless yeast % is low and time is long.`
+      });
+    } else if (ddt > 28) {
+      checks.push({
+        id: 'ddt_warm',
+        severity: 'warn',
+        message: `Target dough temp ${ddt}°C is warm — risk of fast fermentation and weaker structure if bulk is extended.`
+      });
+    } else {
+      checks.push({
+        id: 'ddt_ok',
+        severity: 'info',
+        message: `Target dough temp ${ddt}°C is in a typical artisan range (~24–26°C).`
+      });
+    }
+
+    if (ambient !== undefined && ambient > ddt + 3) {
+      checks.push({
+        id: 'ddt_friction_water',
+        severity: 'info',
+        message: `Ambient ${ambient}°C is warmer than DDT ${ddt}°C — mixer friction usually heats dough; use colder water or shorter mix to hit DDT.`
+      });
+    }
+    if (ambient !== undefined && ambient < ddt - 5) {
+      checks.push({
+        id: 'ddt_warm_water',
+        severity: 'info',
+        message: `Ambient ${ambient}°C is cooler than DDT ${ddt}°C — warmer water may be needed to reach target dough temperature.`
+      });
+    }
+  }
+
+  if (style === 'quick_yeast' && yeastPct !== null && yeastPct < 0.5) {
+    checks.push({
+      id: 'quick_yeast_low',
+      severity: 'warn',
+      message: 'Quick yeast-bread style hint conflicts with very low yeast — expect long waits unless warm proofing is used.'
+    });
+  }
+
+  if (style === 'sandwich_loaf' && yeastPct !== null && yeastPct > 2.5) {
+    checks.push({
+      id: 'sandwich_yeast_high',
+      severity: 'info',
+      message: `Yeast ${yeastPct}% is high for sandwich loaf — OK for rapid rise recipes; shorten proof to avoid collapse.`
+    });
+  }
+
+  if (style === 'rolls' && yeastPct !== null && yeastPct >= 1 && yeastPct <= 2.5) {
+    checks.push({
+      id: 'rolls_yeast_ok',
+      severity: 'info',
+      message: `Yeast ${yeastPct}% is typical for dinner rolls and buns.`
     });
   }
 

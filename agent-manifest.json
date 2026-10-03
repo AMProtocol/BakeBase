@@ -1,7 +1,7 @@
 {
   "spec_version": "agentmanifest-0.3",
   "name": "BakeBase",
-  "version": "1.3.0",
+  "version": "1.5.0",
   "description": "Agent reference API for baking — ingredient science, chemistry, and validation of external recipes (web, books, user input). Not a recipe library. Use POST /baking/validate-mix with gram weights from any source to map ingredients to the catalog, compute baker's hydration and salt/yeast ratios, and run combine analysis with pass/warn/fail checks.",
   "homepage": "https://bakebase.agent-manifest.com",
   "documentation": "https://bakebase.agent-manifest.com/agents",
@@ -76,13 +76,13 @@
     {
       "path": "/baking/validate-mix",
       "method": "POST",
-      "description": "PRIMARY FOR AGENTS: Validate an external ingredient list (e.g. parsed from a web recipe) by name + grams. Resolves to catalog IDs, merges duplicate lines, returns dough_metrics, full combine chemistry, and validation checks. Optional intent: bread, custard, cake, cookie, or auto.",
+      "description": "PRIMARY FOR AGENTS: Validate an external ingredient list (parsed from web/user) by name + grams or quantity+unit. Starter-aware baker's hydration, flour cup packing warnings, fermentation/DDT heuristics when process hints provided.",
       "parameters": [
         {
           "name": "ingredients",
           "type": "array",
           "required": true,
-          "description": "Array of { ingredient_name, quantity_g }. Names matched to catalog (exact or search)."
+          "description": "Array of { ingredient_name, quantity_g } OR { ingredient_name, quantity, unit }. Names matched to catalog (exact or search)."
         },
         {
           "name": "intent",
@@ -91,13 +91,19 @@
           "description": "bread | custard | cake | cookie | auto (default auto)"
         },
         {
+          "name": "process",
+          "type": "object",
+          "required": false,
+          "description": "Optional { yeast_type, cold_retard_hours, style: lean_bread|enriched_bread|sourdough|pizza|cake|cookie|muffin_quick_bread|rolls|…, target_dough_temp_c, preferment_bakers_pct }"
+        },
+        {
           "name": "source_url",
           "type": "string",
           "required": false,
           "description": "Optional URL of recipe being validated (for agent traceability only)"
         }
       ],
-      "response_description": "resolved_ingredients, dough_metrics, chemistry, validation { status, checks }, agent_guidance. Does not return cooking steps."
+      "response_description": "resolved_ingredients, unit_conversions, volume_conversions, dough_metrics (starter-adjusted), chemistry, validation { status, checks }, agent_guidance."
     },
     {
       "path": "/baking/pan-scale",
@@ -187,7 +193,7 @@
     "uptime_percentage": 99,
     "avg_response_time_ms": 120
   },
-  "agent_notes": "BakeBase is a safeguard for baking agents — NOT a recipe site. WORKFLOW: 1) Discover via AgentManifest registry. 2) POST /api/keys. 3) Parse a web recipe into ingredients (grams preferred, or quantity+unit). 4) POST /baking/validate-mix with intent bread and optional process { yeast_type, cold_retard_hours, style: baguette } for fermentation heuristics. 5) GET /baking/convert for cup/tsp→grams when needed. 6) GET /ingredients/* for substitutions. BakeBase flags bad ratios, unknown ingredients, and fermentation mismatches — it does not author steps or guarantee success.",
+  "agent_notes": "BakeBase is a safeguard for baking agents — NOT a recipe site. WORKFLOW: 1) Discover via AgentManifest registry. 2) POST /api/keys. 3) Parse a web recipe into ingredients (grams preferred, or quantity+unit). 4) POST /baking/validate-mix with intent bread and optional process { yeast_type, cold_retard_hours, target_dough_temp_c, preferment_bakers_pct, style: baguette }. 5) GET /baking/convert for cup/tsp→grams when needed. 6) GET /ingredients/* for substitutions. BakeBase flags bad ratios, cup packing, starter hydration, and fermentation mismatches — it does not author steps or guarantee success.",
   "contact": "mailto:brandon@agent-manifest.com",
   "listing_requested": true,
   "last_updated": "2026-10-03T00:00:00.000Z"
