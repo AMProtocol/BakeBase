@@ -2,10 +2,23 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-async function main() {
-  console.log('🌱 Starting seed...');
+/** Full catalog is ~62 ingredients; allow small drift from edits */
+const MIN_CATALOG_ROWS = 50;
 
-  // Clear existing data
+async function main() {
+  const existing = await prisma.ingredient.count();
+  const hasWater = await prisma.ingredient.findFirst({ where: { name: 'Water' } });
+  const hasSalt = await prisma.ingredient.findFirst({ where: { name: 'Table Salt' } });
+
+  if (existing >= MIN_CATALOG_ROWS && hasWater && hasSalt) {
+    console.log(`✅ Ingredient catalog OK (${existing} rows), skip seed`);
+    return;
+  }
+
+  console.log(
+    `🌱 Seeding BakeBase catalog (found ${existing} rows; water=${Boolean(hasWater)} salt=${Boolean(hasSalt)})...`
+  );
+
   await prisma.ingredient.deleteMany();
 
   // FLOURS

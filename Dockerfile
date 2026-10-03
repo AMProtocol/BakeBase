@@ -42,9 +42,11 @@ RUN npm install --only=production
 # Copy built files and Prisma client
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY scripts/start.sh ./scripts/start.sh
+RUN chmod +x ./scripts/start.sh
 
 # Expose port
 EXPOSE 3000
 
-# Start command
-CMD npx prisma db push && npm start
+# Push schema, seed catalog if empty/incomplete, then serve
+CMD ["./scripts/start.sh"]

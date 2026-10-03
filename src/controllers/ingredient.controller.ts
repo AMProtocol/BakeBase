@@ -28,10 +28,14 @@ export class IngredientController {
       const where: any = {};
       if (category) where.category = category;
       if (funcFilter) {
-        where.primary_function = {
-          contains: funcFilter as string,
-          mode: 'insensitive'
-        };
+        const fn = String(funcFilter).toLowerCase();
+        if (fn === 'emulsifying') where.emulsifying = true;
+        else if (fn === 'gluten_forming') where.gluten_forming = true;
+        else if (fn === 'hygroscopic') where.hygroscopic = true;
+        else if (fn === 'leavening') where.leavening_type = { not: null };
+        else {
+          where.primary_function = { contains: fn, mode: 'insensitive' };
+        }
       }
 
       const ingredients = await prisma.ingredient.findMany({ where });
