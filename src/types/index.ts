@@ -3,6 +3,20 @@ export interface IngredientInput {
   quantity_g: number;
 }
 
+export interface RecipeClassification {
+  type:
+    | 'cheesecake_filling'
+    | 'graham_crust'
+    | 'baked_custard'
+    | 'cake_batter'
+    | 'bread_dough'
+    | 'cookie_dough'
+    | 'pastry_dough'
+    | 'unknown';
+  confidence: 'high' | 'medium' | 'low';
+  notes: string;
+}
+
 export interface CombinedAnalysis {
   total_weight_g: number;
   total_hydration_pct: number;
@@ -14,6 +28,7 @@ export interface CombinedAnalysis {
     min: number;
     max: number;
   };
+  recipe_classification: RecipeClassification;
   leavening_analysis: {
     biological_present: boolean;
     chemical_present: boolean;
@@ -24,14 +39,24 @@ export interface CombinedAnalysis {
   hydration_analysis: {
     flour_weight_g: number;
     liquid_weight_g: number;
-    hydration_ratio_pct: number;
-    assessment: 'dry' | 'low' | 'normal' | 'high' | 'very_high' | 'batter';
+    moisture_pct_of_batch: number;
+    hydration_ratio_pct: number | null;
+    assessment:
+      | 'dry'
+      | 'low'
+      | 'normal'
+      | 'high'
+      | 'very_high'
+      | 'batter'
+      | 'flourless_custard'
+      | 'not_applicable';
     notes: string;
   };
   protein_interaction_summary: string;
   predicted_texture_profile: string[];
   ph_environment: string;
   prediction: string;
+  baking_guidance: string[];
   warnings: string[];
   ingredients_used: Array<{
     name: string;

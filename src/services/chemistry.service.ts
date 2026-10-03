@@ -1,6 +1,80 @@
-import { IngredientInput, CombinedAnalysis } from '../types';
+import { IngredientInput, CombinedAnalysis, RecipeClassification } from '../types';
 
 export class ChemistryService {
+  private static classifyRecipe(
+    flourWeight: number,
+    ingredients_used: Array<{ name: string; quantity_g: number; percentage_of_total: number }>,
+    totalFat: number,
+    totalSugar: number
+  ): RecipeClassification {
+    const names = ingredients_used.map((i) => i.name.toLowerCase());
+    const has = (n: string) => names.some((x) => x.includes(n));
+    const pct = (n: string) =>
+      ingredients_used.find((i) => i.name.toLowerCase().includes(n))?.percentage_of_total ?? 0;
+
+    if (has('graham') && has('butter') && flourWeight === 0 && ingredients_used.length <= 4) {
+      return {
+        type: 'graham_crust',
+        confidence: 'high',
+        notes: 'Press-in crumb crust; bake briefly before adding wet filling.'
+      };
+    }
+
+    if (flourWeight === 0 && has('cream cheese') && pct('cream cheese') >= 35) {
+      return {
+        type: 'cheesecake_filling',
+        confidence: 'high',
+        notes: 'Cream-cheese custard set by egg coagulation; no gluten structure. Gentle bake, water bath recommended.'
+      };
+    }
+
+    if (flourWeight === 0 && (has('egg') || has('milk') || has('cream')) && totalFat > 8) {
+      return {
+        type: 'baked_custard',
+        confidence: 'medium',
+        notes: 'Flourless dairy-egg matrix; structure from coagulated proteins, not gluten.'
+      };
+    }
+
+    if (flourWeight > 0 && totalSugar > 25 && totalFat > 12) {
+      return { type: 'cake_batter', confidence: 'medium', notes: 'Sweetened fat-flour batter.' };
+    }
+
+    if (flourWeight > 0 && totalSugar < 15) {
+      return { type: 'bread_dough', confidence: 'low', notes: 'Flour-forward mix; confirm hydration and leavening.' };
+    }
+
+    if (flourWeight > 0) {
+      return { type: 'cookie_dough', confidence: 'low', notes: 'Flour present; treat hydration ratio as meaningful.' };
+    }
+
+    return { type: 'unknown', confidence: 'low', notes: 'Could not classify; review ingredients manually.' };
+  }
+
+  private static bakingGuidanceFor(classification: RecipeClassification): string[] {
+    switch (classification.type) {
+      case 'cheesecake_filling':
+        return [
+          'Use room-temperature cream cheese; mix until smooth before adding eggs.',
+          'Bake gently (often 325°F / 163°C) in a water bath to limit curdling and cracking.',
+          'Doneness: set edges, slight center jiggle; avoid exceeding ~180°F (82°C) in the filling core.',
+          'Chill thoroughly before slicing; release springform sides after chilling.'
+        ];
+      case 'graham_crust':
+        return [
+          'Press crumbs firmly into the pan; pre-bake ~10 minutes at 350°F (177°C) for a crisp base.',
+          'Cool crust before adding wet filling to avoid a soggy bottom.'
+        ];
+      case 'baked_custard':
+        return [
+          'Low, even heat; water bath helps for large formats.',
+          'Structure comes from egg/dairy coagulation — overbaking causes weeping and graininess.'
+        ];
+      default:
+        return [];
+    }
+  }
+
   /**
    * Analyze a combination of ingredients and predict baking outcome
    */
@@ -87,27 +161,32 @@ export class ChemistryService {
       });
     });
 
-    // Hydration analysis
-    const hydrationRatio = flourWeight > 0 ? (liquidWeight / flourWeight) * 100 : 0;
-    let hydrationAssessment: 'dry' | 'low' | 'normal' | 'high' | 'very_high' | 'batter' = 'normal';
+    const moisturePctOfBatch = totalWeight > 0 ? (liquidWeight / totalWeight) * 100 : 0;
+
+    // Hydration analysis (ratio only meaningful when flour is present)
+    const hydrationRatio = flourWeight > 0 ? (liquidWeight / flourWeight) * 100 : null;
+    let hydrationAssessment: CombinedAnalysis['hydration_analysis']['assessment'] = 'normal';
     let hydrationNotes = '';
 
-    if (hydrationRatio === 0) {
+    if (flourWeight === 0) {
+      hydrationAssessment = 'flourless_custard';
+      hydrationNotes = `No flour: hydration ratio is not applicable. Total water from ingredients ≈ ${liquidWeight.toFixed(0)}g (${moisturePctOfBatch.toFixed(1)}% of batch weight). Structure depends on eggs/dairy coagulation, not gluten.`;
+    } else if (hydrationRatio === 0) {
       hydrationAssessment = 'dry';
-      hydrationNotes = 'No flour detected or no liquid added.';
-    } else if (hydrationRatio < 50) {
+      hydrationNotes = 'No free water detected relative to flour.';
+    } else if (hydrationRatio! < 50) {
       hydrationAssessment = 'dry';
       hydrationNotes = 'Very low hydration, suitable for pie dough or shortbread.';
-    } else if (hydrationRatio < 60) {
+    } else if (hydrationRatio! < 60) {
       hydrationAssessment = 'low';
       hydrationNotes = 'Low hydration, suitable for bagels or stiff doughs.';
-    } else if (hydrationRatio >= 60 && hydrationRatio < 70) {
+    } else if (hydrationRatio! >= 60 && hydrationRatio! < 70) {
       hydrationAssessment = 'normal';
       hydrationNotes = 'Normal bread dough hydration, suitable for most yeasted breads.';
-    } else if (hydrationRatio >= 70 && hydrationRatio < 100) {
+    } else if (hydrationRatio! >= 70 && hydrationRatio! < 100) {
       hydrationAssessment = 'high';
       hydrationNotes = 'High hydration, suitable for ciabatta, focaccia, or artisan breads.';
-    } else if (hydrationRatio >= 100 && hydrationRatio < 150) {
+    } else if (hydrationRatio! >= 100 && hydrationRatio! < 150) {
       hydrationAssessment = 'very_high';
       hydrationNotes = 'Very high hydration, creates wet dough or thick batter.';
     } else {
@@ -123,7 +202,10 @@ export class ChemistryService {
 
     if (!hasLeavening) {
       leaveningAdequacy = 'none';
-      leaveningNotes = 'No leavening detected. Product will be dense (flatbread, unleavened bread, or must rely on eggs/steam).';
+      leaveningNotes =
+        flourWeight === 0
+          ? 'No chemical/biological leavening — expected for baked custards and cheesecakes (dense set by coagulation).'
+          : 'No leavening detected. Product will be dense unless eggs or steam provide lift.';
     } else {
       const types: string[] = [];
       if (leaveners.biological) types.push('biological (yeast)');
@@ -158,7 +240,10 @@ export class ChemistryService {
     let proteinSummary = '';
     const avgProteinPct = totalProtein;
 
-    if (avgProteinPct < 5) {
+    if (flourWeight === 0) {
+      proteinSummary =
+        'No gluten-forming flour. Protein from eggs and dairy sets structure through coagulation when heated — not an elastic gluten network.';
+    } else if (avgProteinPct < 5) {
       proteinSummary = 'Very low protein content; minimal structure. Relies on starch, fat, or eggs for texture.';
     } else if (avgProteinPct < 10) {
       proteinSummary = 'Low protein content; tender, delicate crumb. Limited gluten development.';
@@ -168,19 +253,33 @@ export class ChemistryService {
       proteinSummary = 'High protein content; strong gluten network. Produces chewy, elastic texture.';
     }
 
+    const recipeClassification = this.classifyRecipe(
+      flourWeight,
+      ingredients_used,
+      totalFat,
+      totalSugar
+    );
+
     // Predicted texture
     const textureProfile: string[] = [];
 
     if (totalFat > 15) textureProfile.push('rich');
     if (totalFat > 25) textureProfile.push('tender');
     if (avgProteinPct > 12 && flourWeight > 0) textureProfile.push('chewy');
-    if (avgProteinPct < 8) textureProfile.push('delicate');
-    if (hydrationRatio > 100) textureProfile.push('moist');
-    if (hydrationRatio < 60 && flourWeight > 0) textureProfile.push('crumbly');
+    if (avgProteinPct < 8 && flourWeight > 0) textureProfile.push('delicate');
+    if (moisturePctOfBatch > 45) textureProfile.push('moist');
+    if (hydrationRatio !== null && hydrationRatio < 60) textureProfile.push('crumbly');
     if (totalSugar > 20) textureProfile.push('sweet');
-    // Only "airy" if there's leavening AND enough liquid to form a dough/batter
-    if (hasLeavening && (hydrationRatio > 30 || flourWeight === 0)) textureProfile.push('airy');
-    if (!hasLeavening && flourWeight > 0) textureProfile.push('dense');
+
+    if (recipeClassification.type === 'cheesecake_filling' || recipeClassification.type === 'baked_custard') {
+      textureProfile.push('dense', 'creamy');
+    } else if (hasLeavening && flourWeight > 0 && hydrationRatio !== null && hydrationRatio > 80) {
+      textureProfile.push('airy');
+    } else if (!hasLeavening && flourWeight > 0) {
+      textureProfile.push('dense');
+    }
+
+    const bakingGuidance = this.bakingGuidanceFor(recipeClassification);
 
     // pH environment
     let phEnv = 'neutral';
@@ -207,7 +306,7 @@ export class ChemistryService {
     // Generate plain-language prediction
     const prediction = this.generatePrediction({
       hydrationAssessment,
-      hydrationRatio,
+      hydrationRatio: hydrationRatio ?? 0,
       flourWeight,
       totalWeight,
       hasLeavening,
@@ -217,23 +316,27 @@ export class ChemistryService {
       totalSugar,
       phEnv,
       textureProfile,
-      ingredients_used
+      ingredients_used,
+      recipeClassification
     });
 
     // Generate warnings
     const warnings: string[] = [];
 
-    if (flourWeight > 0 && hydrationRatio < 40) {
+    if (flourWeight > 0 && hydrationRatio !== null && hydrationRatio < 40) {
       warnings.push('Very low hydration may result in dry, crumbly texture. Consider adding more liquid.');
     }
-    if (flourWeight > 0 && hydrationRatio > 200) {
+    if (flourWeight > 0 && hydrationRatio !== null && hydrationRatio > 200) {
       warnings.push('Extremely high hydration ratio. This will be a very thin batter.');
     }
     if (flourWeight > 0 && !hasLeavening && totalWeight > 200) {
       warnings.push('No leavening agent detected for a substantial amount of flour. Product will be very dense unless eggs provide structure and lift.');
     }
-    if (totalSugar > 50) {
-      warnings.push('Very high sugar content may inhibit gluten development and slow yeast fermentation if present.');
+    if (totalSugar > 50 && flourWeight > 0 && leaveners.biological) {
+      warnings.push('Very high sugar content may slow yeast fermentation.');
+    }
+    if (totalSugar > 50 && flourWeight > 0 && !leaveners.biological) {
+      warnings.push('Very high sugar content may inhibit gluten development in flour-based doughs.');
     }
 
     return {
@@ -247,6 +350,7 @@ export class ChemistryService {
         min: minPH ?? 7.0,
         max: maxPH ?? 7.0
       },
+      recipe_classification: recipeClassification,
       leavening_analysis: {
         biological_present: leaveners.biological,
         chemical_present: leaveners.chemical,
@@ -257,6 +361,7 @@ export class ChemistryService {
       hydration_analysis: {
         flour_weight_g: flourWeight,
         liquid_weight_g: liquidWeight,
+        moisture_pct_of_batch: Math.round(moisturePctOfBatch * 100) / 100,
         hydration_ratio_pct: hydrationRatio,
         assessment: hydrationAssessment,
         notes: hydrationNotes
@@ -265,6 +370,7 @@ export class ChemistryService {
       predicted_texture_profile: textureProfile,
       ph_environment: phEnvironment,
       prediction,
+      baking_guidance: bakingGuidance,
       warnings,
       ingredients_used
     };
@@ -283,6 +389,7 @@ export class ChemistryService {
     phEnv: string;
     textureProfile: string[];
     ingredients_used: Array<{ name: string; quantity_g: number; percentage_of_total: number }>;
+    recipeClassification: RecipeClassification;
   }): string {
     const {
       hydrationRatio,
@@ -294,15 +401,20 @@ export class ChemistryService {
       totalFat,
       totalSugar,
       phEnv,
-      textureProfile
+      textureProfile,
+      recipeClassification
     } = context;
 
     let prediction = '';
 
-    // Determine bake type
-    if (flourWeight === 0) {
-      prediction = `This mixture contains no flour, suggesting a flourless preparation. `;
-      prediction += `With ${totalWeight}g total weight, this could be a custard, mousse, or flourless cake depending on other ingredients. `;
+    if (recipeClassification.type === 'cheesecake_filling') {
+      prediction = `Identified as a cream-cheese cheesecake filling (${totalWeight.toFixed(0)}g). Expect a dense, creamy set when baked — eggs and dairy proteins coagulate; no gluten structure. `;
+    } else if (recipeClassification.type === 'graham_crust') {
+      prediction = `Identified as a graham-style press-in crust (${totalWeight.toFixed(0)}g). Pre-bake before adding wet filling. `;
+    } else if (recipeClassification.type === 'baked_custard') {
+      prediction = `Flourless baked custard (${totalWeight.toFixed(0)}g). Gentle heat and even baking are critical. `;
+    } else if (flourWeight === 0) {
+      prediction = `Flourless mixture (${totalWeight.toFixed(0)}g). Likely custard, mousse, or specialty cake depending on ingredients. `;
     } else if (hydrationRatio > 150) {
       prediction = `This is a high-hydration batter (${hydrationRatio.toFixed(0)}% hydration ratio). `;
       prediction += `Expected outcome: ${
@@ -332,9 +444,9 @@ export class ChemistryService {
     }
 
     // Add protein context
-    if (avgProteinPct > 12 && flourWeight > 0) {
+    if (flourWeight > 0 && avgProteinPct > 12) {
       prediction += `High protein content will create a strong gluten network, resulting in chewy, elastic texture. `;
-    } else if (avgProteinPct < 8 && flourWeight > 0) {
+    } else if (flourWeight > 0 && avgProteinPct < 8) {
       prediction += `Low protein content will produce a tender, delicate crumb with minimal chewiness. `;
     }
 

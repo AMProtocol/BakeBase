@@ -9,8 +9,9 @@ async function main() {
   const existing = await prisma.ingredient.count();
   const hasWater = await prisma.ingredient.findFirst({ where: { name: 'Water' } });
   const hasSalt = await prisma.ingredient.findFirst({ where: { name: 'Table Salt' } });
+  const hasGraham = await prisma.ingredient.findFirst({ where: { name: 'Graham Cracker Crumbs' } });
 
-  if (existing >= MIN_CATALOG_ROWS && hasWater && hasSalt) {
+  if (existing >= MIN_CATALOG_ROWS && hasWater && hasSalt && hasGraham) {
     console.log(`✅ Ingredient catalog OK (${existing} rows), skip seed`);
     return;
   }
@@ -2184,8 +2185,68 @@ async function main() {
       confidence_level: 'verified'
     }
   ];
+
+  const crackers = [
+    {
+      name: 'Graham Cracker Crumbs',
+      category: 'cracker',
+      description:
+        'Sweet whole-wheat cracker crumbs used for pie and cheesecake crusts; binds with melted butter.',
+      water_content_pct: 3.5,
+      protein_content_pct: 7.0,
+      fat_content_pct: 10.0,
+      starch_content_pct: 72.0,
+      sugar_content_pct: 20.0,
+      fiber_content_pct: 4.0,
+      ph_level_min: 6.0,
+      ph_level_max: 6.8,
+      density_g_per_ml: 0.45,
+      standard_measurement_unit: 'weight',
+      gluten_forming: false,
+      emulsifying: false,
+      leavening_type: null,
+      hygroscopic: false,
+      typical_hydration_ratio: null,
+      flavor_profile: ['honey', 'wheat', 'sweet', 'toasted'],
+      primary_function:
+        'Provides crisp crumb structure for press-in crusts when combined with fat; no gluten network.',
+      interactions: [
+        { ingredient: 'butter', effect: 'Fat coats crumbs and sets when chilled', notes: 'Classic cheesecake crust' },
+        { ingredient: 'heat', effect: 'Toasts and sets crust', notes: 'Pre-bake 8–12 min before wet fillings' },
+        { ingredient: 'moisture', effect: 'Absorbs liquid from fillings if under-baked', notes: 'Pre-bake and cool crust' }
+      ],
+      substitution_ratio: [
+        { substitute: 'digestive biscuit crumbs', ratio: '1:1', notes: 'Less honey flavor' },
+        { substitute: 'vanilla wafer crumbs', ratio: '1:1', notes: 'Milder, sweeter crust' }
+      ],
+      temperature_sensitivity:
+        'Dry crumbs toast 300–350°F (150–177°C). Butter melts ~90°F (32°C); crust firms when cooled.',
+      source_notes: 'USDA FoodData Central (graham crackers, crushed), food science consensus',
+      confidence_level: 'verified'
+    }
+  ];
+
   // Combine all ingredients
-  const allIngredients = [...flours, ...eggs, ...fats, ...sugars, ...leaveners, ...liquids, ...salts, ...starches, ...chocolates, ...dairy, ...extracts, ...acids, ...spices, ...oils, ...nuts, ...thickeners, ...syrups];
+  const allIngredients = [
+    ...flours,
+    ...eggs,
+    ...fats,
+    ...sugars,
+    ...leaveners,
+    ...liquids,
+    ...salts,
+    ...starches,
+    ...chocolates,
+    ...dairy,
+    ...extracts,
+    ...acids,
+    ...spices,
+    ...oils,
+    ...nuts,
+    ...thickeners,
+    ...syrups,
+    ...crackers
+  ];
 
   // Insert ingredients
   for (const ingredient of allIngredients) {
@@ -2210,6 +2271,7 @@ async function main() {
   console.log(`   - ${nuts.length} nuts`);
   console.log(`   - ${thickeners.length} thickeners`);
   console.log(`   - ${syrups.length} syrups`);
+  console.log(`   - ${crackers.length} cracker products`);
 }
 
 main()

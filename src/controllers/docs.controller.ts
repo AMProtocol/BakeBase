@@ -9,10 +9,10 @@ export class DocsController {
   static getAgentGuide(_req: Request, res: Response): void {
     const guide: AgentGuide = {
       api_name: 'BakeBase',
-      version: '1.0.0',
+      version: '1.1.0',
       purpose: 'AI-first food science reference API focused on the functional properties of baking ingredients. Provides structured, scientifically accurate data about ingredient chemistry, interactions, and predicted baking outcomes.',
       recommended_usage:
-        'API key required for all data endpoints. Get a key at /dashboard/keys (no account needed). Send it as Authorization: Bearer <key> or X-API-Key header. Use BakeBase to understand ingredient functionality, calculate hydration ratios, predict texture outcomes, and analyze ingredient combinations before baking. The /combine endpoint is the most powerful feature - it performs real chemistry calculations and returns plain-language predictions suitable for AI agent interpretation.',
+        'API key required for all data endpoints. Get a key at /dashboard/keys (no account needed). For full recipes with pan scaling: GET /formulations/ny-cheesecake?pan_diameter_in=12&analyze=true — returns gram weights, ingredient IDs, baking steps, and chemistry. Use /baking/pan-scale for (D/d)² math. Use /ingredients/combine to validate any custom gram list. Discovery: find BakeBase via AgentManifest registry (api.agent-manifest.com).',
       available_endpoints: [
         {
           path: 'GET /ingredients',
@@ -33,10 +33,24 @@ export class DocsController {
           when_to_use: 'Find ingredients when you have partial name or want to search by role (e.g., "gluten", "tender", "brown")'
         },
         {
+          path: 'GET /formulations/:id',
+          method: 'GET',
+          description: 'Reference recipe scaled to a round pan diameter with BakeBase ingredient IDs',
+          when_to_use:
+            'Primary agent path for baked goods with known templates. Example: GET /formulations/ny-cheesecake?pan_diameter_in=12&analyze=true for a 12-inch springform cheesecake with crust + filling grams and chemistry.'
+        },
+        {
+          path: 'GET /baking/pan-scale',
+          method: 'GET',
+          description: 'Pan area scale factor between round pans',
+          when_to_use: 'Query from_diameter_in and to_diameter_in to multiply all ingredient masses for constant fill height.'
+        },
+        {
           path: 'POST /ingredients/combine',
           method: 'POST',
           description: 'Analyze a combination of ingredients with real chemistry calculations',
-          when_to_use: 'Predict baking outcome before mixing. Provide array of {ingredient_id, quantity_g} and receive hydration analysis, leavening adequacy, pH environment, texture prediction, and plain-language outcome forecast. This is the primary value-add endpoint.'
+          when_to_use:
+            'Validate custom gram lists. Returns recipe_classification (e.g. cheesecake_filling), baking_guidance, and flourless-aware hydration notes.'
         },
         {
           path: 'GET /categories',
@@ -95,7 +109,7 @@ export class DocsController {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       service: 'BakeBase API',
-      version: '1.0.0'
+      version: '1.1.0'
     });
   }
 }

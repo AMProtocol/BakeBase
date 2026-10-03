@@ -3,6 +3,7 @@ import { IngredientController } from '../controllers/ingredient.controller';
 import { CategoryController } from '../controllers/category.controller';
 import { DocsController } from '../controllers/docs.controller';
 import { KeysController } from '../controllers/keys.controller';
+import { FormulationController } from '../controllers/formulation.controller';
 import { openApiSpec } from '../middleware/openapi';
 import { requireApiKey } from '../middleware/auth';
 import { keyProvisioningLimiter } from '../middleware/rateLimit';
@@ -14,7 +15,7 @@ router.get('/', (_req, res) => {
   res.json({
     service: 'BakeBase',
     description: 'AI-first food science reference API for baking ingredients',
-    version: '1.0.0',
+    version: '1.1.0',
     status: 'healthy',
     agent_first_step:
       'Fetch /.well-known/agent-manifest.json before querying. It contains auth and usage.',
@@ -24,6 +25,8 @@ router.get('/', (_req, res) => {
       ingredients: '/ingredients',
       categories: '/categories',
       combine: '/ingredients/combine',
+      formulations: '/formulations',
+      pan_scale: '/baking/pan-scale',
       docs: '/docs/openapi.json',
       health: '/health',
       api_keys: '/dashboard/keys',
@@ -57,5 +60,8 @@ router.get('/ingredients/:id', requireApiKey, IngredientController.getById);
 router.get('/ingredients', requireApiKey, IngredientController.getAll);
 router.post('/ingredients/combine', requireApiKey, IngredientController.combine);
 router.get('/categories', requireApiKey, CategoryController.getAll);
+router.get('/formulations', requireApiKey, FormulationController.list);
+router.get('/formulations/:id', requireApiKey, FormulationController.build);
+router.get('/baking/pan-scale', requireApiKey, FormulationController.panScale);
 
 export default router;

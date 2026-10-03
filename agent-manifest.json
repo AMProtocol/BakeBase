@@ -1,8 +1,8 @@
 {
   "spec_version": "agentmanifest-0.3",
   "name": "BakeBase",
-  "version": "1.0.0",
-  "description": "AI-first food science reference API for baking ingredients. Provides scientifically accurate data on 60+ ingredients across 16 categories including functional properties, chemical interactions, hydration ratios, pH profiles, substitution logic, and real-time chemistry analysis. Use this when you need to understand how baking ingredients behave individually or in combination - ideal for recipe generation, ingredient substitution, troubleshooting baking failures, or building food science applications.",
+  "version": "1.1.0",
+  "description": "AI-first food science reference API for baking ingredients and scaled formulations. Provides ingredient chemistry, pan scaling math, reference recipes (e.g. NY cheesecake) with gram weights and IDs, and combine analysis with recipe classification (cheesecake_filling, graham_crust, etc.). Ideal for agents that must not hallucinate recipes: start at GET /formulations/:id?pan_diameter_in=12&analyze=true.",
   "homepage": "https://bakebase.agent-manifest.com",
   "documentation": "https://bakebase.agent-manifest.com/agents",
   "categories": [
@@ -71,7 +71,60 @@
           "description": "Array of objects with {ingredient_id: string, quantity_g: number}. Provide 2-10 ingredients for best results. All quantities in grams."
         }
       ],
-      "response_description": "Returns detailed chemistry analysis: total_weight_g, hydration_analysis {flour_weight_g, liquid_weight_g, hydration_ratio_pct, assessment ['dry'|'dough'|'batter'], notes}, leavening_analysis {biological_present, chemical_present, mechanical_present, adequacy ['none'|'adequate'|'excessive'], notes}, protein_analysis {total_protein_g, protein_pct, notes}, fat_analysis {total_fat_g, fat_pct, notes}, ph_analysis {min_ph, max_ph, environment, notes}, predicted_texture_profile (array like ['rich', 'tender', 'airy']), prediction (plain-language outcome), warnings (array of issues), and recommendations (array of suggested adjustments)."
+      "response_description": "Returns chemistry analysis including recipe_classification, baking_guidance, flourless-aware hydration_analysis (moisture_pct_of_batch when no flour), leavening_analysis, predicted_texture_profile, prediction, and warnings."
+    },
+    {
+      "path": "/formulations",
+      "method": "GET",
+      "description": "List reference baking formulations that scale by round pan diameter.",
+      "parameters": [],
+      "response_description": "Array of template summaries (id, name, reference pan, scaling_formula)."
+    },
+    {
+      "path": "/formulations/:id",
+      "method": "GET",
+      "description": "Build a scaled formulation with BakeBase ingredient IDs and optional chemistry.",
+      "parameters": [
+        {
+          "name": "pan_diameter_in",
+          "type": "number",
+          "required": true,
+          "description": "Target round pan diameter in inches (e.g. 12 for a 12-inch springform)."
+        },
+        {
+          "name": "reference_diameter_in",
+          "type": "number",
+          "required": false,
+          "description": "Override reference diameter; default is the template reference pan."
+        },
+        {
+          "name": "analyze",
+          "type": "boolean",
+          "required": false,
+          "description": "If true, include chemistry for filling, crust, and full batch."
+        }
+      ],
+      "response_description": "Scaled lines with quantity_g and ingredient_id, baking steps, scale_factor, and optional chemistry array."
+    },
+    {
+      "path": "/baking/pan-scale",
+      "method": "GET",
+      "description": "Return (to/from)² scale factor for round pans of equal fill height.",
+      "parameters": [
+        {
+          "name": "from_diameter_in",
+          "type": "number",
+          "required": true,
+          "description": "Reference pan diameter in inches."
+        },
+        {
+          "name": "to_diameter_in",
+          "type": "number",
+          "required": true,
+          "description": "Target pan diameter in inches."
+        }
+      ],
+      "response_description": "scale_factor and formula."
     },
     {
       "path": "/categories",
@@ -108,7 +161,7 @@
     "uptime_percentage": 99,
     "avg_response_time_ms": 120
   },
-  "agent_notes": "No account required to obtain an API key. Generate a key at the dashboard/keys page. Authentication via API key in the Authorization header (Bearer token) or X-API-Key header. Pricing is free. BakeBase is optimized for AI agents building food, recipe, and culinary applications. CRITICAL: The /ingredients/combine endpoint is the most valuable - it performs actual chemistry calculations, not just data lookup. Chemistry fixes (Feb 2026): Now correctly counts ALL water sources in hydration calculations (not just >70% water ingredients), detects excessive leavening (>6% chemical, >4% biological), and eliminates contradictory texture predictions. When using /combine, provide ingredient IDs from the /ingredients list endpoint and quantities in grams. The analysis considers: hydration ratios (flour:liquid), leavening adequacy (chemical/biological/mechanical), protein interactions (gluten formation), fat content (tenderness), pH balance (acidity/alkalinity), and temperature sensitivity. Hydration ratio guide: <60% = dry dough (cookies, pie), 60-70% = bread dough, 70-100% = high hydration bread, >100% = batter (cakes, pancakes). All ingredient data sourced from USDA FoodData Central and peer-reviewed food science literature (confidence_level field indicates verification status). pH ranges are typical values and may vary by brand. For substitution recommendations, always consider the functional role in context. The database covers 60 ingredients optimized for common baking - not exotic or rare ingredients. Use /categories to discover ingredient structure before querying. Every response includes a 'meta' object with endpoint descriptions and field glossaries for self-documentation.",
+  "agent_notes": "AGENT WORKFLOW (anti-hallucination): 1) Discover BakeBase via AgentManifest registry. 2) POST /api/keys for a key. 3) For cheesecake in a springform: GET /formulations/ny-cheesecake?pan_diameter_in=12&analyze=true — returns gram weights, ingredient IDs, baking steps, and chemistry. 4) Optional: GET /baking/pan-scale?from_diameter_in=9&to_diameter_in=12 for scale_factor only. 5) POST /ingredients/combine with {ingredient_id, quantity_g} to validate custom mixes; response includes recipe_classification and baking_guidance. Quantities in grams only (quantity_g). Combine classifies cheesecakes and flourless custards separately from bread dough. Ingredient data from USDA FoodData Central where noted.",
   "contact": "mailto:brandon@agent-manifest.com",
   "listing_requested": true,
   "last_updated": "2026-10-03T00:00:00.000Z"
